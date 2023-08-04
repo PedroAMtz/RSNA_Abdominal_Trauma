@@ -5,7 +5,8 @@ from keras.models import load_model, Model
 from keras.layers import Conv3D, MaxPool3D, Flatten, Dense
 from keras.layers import Dropout, Input, BatchNormalization
 
-
+# function to define the convolutional block, composed by:
+# 3D convolution, Max pooling 3D, Batch Normalization
 def convolutional_block_3d(inputs, num_filters):
 
 	x = Conv3D(filters=num_filters, kernel_size=(3,3,3),
@@ -15,6 +16,8 @@ def convolutional_block_3d(inputs, num_filters):
 
 	return x
 
+# function to define the dense block of the network, composed by:
+# 2 dense layer with 2 dropout layes in between and one output layer for clasification
 def dense_block(flatten_layer):
 	dense_layer_1 = Dense(units=512, activation='relu')(flatten_layer)
 	dense_layer_1 = Dropout(0.4)(dense_layer_1)
@@ -25,6 +28,7 @@ def dense_block(flatten_layer):
 
 	return output_layer
 
+# Main function to build the 3D Conv Network
 def build_3d_network(input_shape):
 
 	input_layer = Input(input_shape)
@@ -38,10 +42,10 @@ def build_3d_network(input_shape):
 
 	output = dense_block(flatten_layer)
 
-	model = Model(inputs=input_layer, outputs=output)
+	model = Model(inputs=input_layer, outputs=output, name="3D CNN")
 
 	model.compile(loss='mae',
-				 optimizer=SGD(lr=1e-06, momentum=0.99, decay=0.0, nesterov=False),
+				 optimizer=SGD(learning_rate=1e-06, momentum=0.99, decay=0.0, nesterov=False),
 				  metrics=['acc'])
 
 	return model
