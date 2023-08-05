@@ -52,6 +52,6 @@ def build_3d_network(input_shape):
 
 if __name__ == "__main__":
 
-	input_shape = (128, 128, 64, 1)
+	input_shape = (512, 512, 64, 1)
 	model = build_3d_network(input_shape)
 	model.summary()
