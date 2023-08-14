@@ -4,7 +4,6 @@ from keras.optimizers import Adam
 from keras.models import load_model, Model
 from keras.layers import Conv3D, MaxPool3D, Flatten, Reshape, Dense
 from keras.layers import Dropout, Input, UpSampling3D
-
 #K.set_image_data_format('channels_first')
 
 def encoder_3d(inputs, num_filters):
@@ -50,7 +49,6 @@ def build_autoencoder(input_shape):
 	model.compile(loss='mae',
 				 optimizer=Adam(),
 				  metrics=['acc'])
-
 	return model
 
 if __name__ == "__main__":
