@@ -22,9 +22,9 @@ def dense_block(flatten_layer):
 	dense_layer_1 = Dense(units=512, activation='relu')(flatten_layer)
 	dense_layer_1 = Dropout(0.4)(dense_layer_1)
 
-	dense_layer_2 = Dense(units=256, activation='relu')(dense_layer_1)
-	dense_layer_2 = Dropout(0.4)(dense_layer_2)
-	output_layer = Dense(units=2, activation='softmax')(dense_layer_2)
+	#dense_layer_2 = Dense(units=256, activation='relu')(dense_layer_1)
+	#dense_layer_2 = Dropout(0.4)(dense_layer_2)
+	output_layer = Dense(units=2, activation='softmax')(dense_layer_1)
 
 	return output_layer
 
@@ -52,6 +52,6 @@ def build_3d_network(input_shape):
 
 if __name__ == "__main__":
 
-	input_shape = (512, 512, 64, 1)
+	input_shape = (128, 128, 64, 1)
 	model = build_3d_network(input_shape)
 	model.summary()
