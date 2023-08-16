@@ -31,13 +31,16 @@ def build_autoencoder(input_shape):
 	x5 = encoder_3d(x4, 32)
 	x6 = encoder_3d(x5, 32)
 
-	# flatten
-	#flatten_layer = Flatten()(x6)
-	#dense_layer = Dense(4 * 4 * 4 * 32)(flatten_layer)
-	#reshape_layer = Reshape((4, 4, 4, 32))(dense_layer)
+
+	# Flatten the encoded output
+	flatten_layer = Flatten()(x6)
+    # Dense layer to obtain encoded feature vector of size 256
+	encoded_feature_vector = Dense(256, activation='relu')(flatten_layer)
+    # Reshape the feature vector
+	reshape_layer = Reshape((4, 4, 4, 4))(encoded_feature_vector)
 
 	# decoder
-	x7 = decoder_3d(x6, 32)
+	x7 = decoder_3d(reshape_layer, 32)
 	x8 = decoder_3d(x7, 32)
 	x9 = decoder_3d(x8, 32)
 	x10 = decoder_3d(x9, 64)
