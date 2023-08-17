@@ -20,15 +20,15 @@ def resize_img(img_paths, size=(128, 128)):
 
 # Populate the volume with images
 	for i, image_array in enumerate(preprocessed_images):
-		volume[i] = image_array
+		volume[:, : ,i] = image_array
 
 	return volume
 
 # Implementation of SIZ algorithm
 def change_depth_siz(patient_volume):
 	desired_depth = 64
-	current_depth = img.shape[-1]
+	current_depth = patient_volume.shape[-1]
 	depth = current_depth / desired_depth
 	depth_factor = 1 / depth
-	img_new = zoom(img, (1, 1, depth_factor), mode='nearest')
+	img_new = zoom(patient_volume, (1, 1, depth_factor), mode='nearest')
 	return img_new
