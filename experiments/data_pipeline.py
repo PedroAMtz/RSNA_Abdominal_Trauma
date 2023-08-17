@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from scipy.ndimage import zoom
-from PIL import Image
 
 # Resizing images 
 def resize_img(img_paths, size=(128, 128)):
