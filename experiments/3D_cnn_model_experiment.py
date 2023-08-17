@@ -4,6 +4,7 @@ from keras.optimizers import SGD
 from keras.models import load_model, Model
 from keras.layers import Conv3D, MaxPool3D, Flatten, Dense
 from keras.layers import Dropout, Input, BatchNormalization
+import mlflow
 
 # function to define the convolutional block, composed by:
 # 3D convolution, Max pooling 3D, Batch Normalization
@@ -50,8 +51,22 @@ def build_3d_network(input_shape):
 
 	return model
 
-if __name__ == "__main__":
+def tf_autolog_experiment(data, labels, experiment_name):
 
-	input_shape = (128, 128, 64, 1)
-	model = build_3d_network(input_shape)
-	model.summary()
+	mlflow.set_experiment(experiment_name)
+	mlflow.set_tracking_uri("http://localhost:5000")
+
+	mlflow.tensorflow.autolog()
+	with mlflow.start_run() as run:
+		data = data
+		labels = labels
+
+		input_shape = (128, 128, 64, 1)
+		model = build_3d_network(input_shape)
+		model.fit(data, labels, epochs=10)
+
+		assert mlflow.active_run()
+		assert mlflow.active_run().info.run_id == run.info.run_id
+
+if __name__ == "__main__":
+	print("Experiment started...")
