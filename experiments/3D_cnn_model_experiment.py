@@ -54,7 +54,7 @@ def build_3d_network(input_shape):
 def tf_autolog_experiment(data, labels, experiment_name):
 
 	mlflow.set_experiment(experiment_name)
-	mlflow.set_tracking_uri("http://localhost:5000")
+	#mlflow.set_tracking_uri("http://localhost:5000")
 
 	mlflow.tensorflow.autolog()
 	with mlflow.start_run() as run:
