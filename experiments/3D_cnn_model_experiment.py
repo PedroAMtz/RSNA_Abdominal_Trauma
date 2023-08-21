@@ -32,7 +32,7 @@ def dense_block(flatten_layer):
 # Main function to build the 3D Conv Network
 def build_3d_network(input_shape):
 
-	input_layer = Input(input_shape)
+	input_layer = Input((input_shape))
 
 	x1 = convolutional_block_3d(input_layer, 64)
 	x2 = convolutional_block_3d(x1, 64)
