@@ -119,6 +119,6 @@ if __name__ == "__main__":
 
 	data_volumes, data_labels = generate_processed_data(cleaned_df["Patient_paths"], cleaned_df["Patient_category"],target_size=(128,128),target_depth=64)
 
-	with open(f'3D_data_{str(data_volumes.shape[1])}_{str(data_volumes.shape[2])}_{str(data_volumes.shape[3])}.npy', 'wb') as f:
+	with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/3D_data_{str(data_volumes.shape[1])}_{str(data_volumes.shape[2])}_{str(data_volumes.shape[3])}.npy', 'wb') as f:
 		np.save(f, data_volumes)
 		np.save(f, data_labels)
