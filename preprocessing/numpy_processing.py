@@ -12,34 +12,41 @@ and store them as npy files so these files could be
 ingested by the model when training
 """
 
-def get_data_for_3d_volumes(data, path, number_idx):
+def get_data_for_3d_volumes(data, train_data_cat, path, number_idx):
+
+	data_to_merge = data[["patient_id", "series_id"]]
+	patient_category = train_data_cat[["patient_id", "any_injury"]]
     
-	data_to_merge = data[["patient_id", "any_injury"]]
-	shuffled_data = data_to_merge.sample(frac=1, random_state=42)
+	merged_df = data_to_merge.merge(patient_category, on='patient_id', how='left')
+    
+	shuffled_data = merged_df.sample(frac=1, random_state=42)
 	shuffled_indexes = shuffled_data.index[:number_idx]
 	selected_rows = shuffled_data.loc[shuffled_indexes]
 	data_to_merge_processed = selected_rows.reset_index()
     
 	total_paths = []
 	patient_ids = []
+	series_ids = []
 	category = []
     
 	for patient_id in range(len(data_to_merge_processed)):
     
-		p_id = str(data_to_merge_processed["patient_id"][patient_id])
+		p_id = str(data_to_merge_processed["patient_id"][patient_id]) + "/" + str(data_to_merge_processed["series_id"][patient_id])
 		str_imgs_path = path + p_id + '/'
 		patient_img_paths = []
 
-		for file in glob(str_imgs_path + '*'):
-			for image_path in glob(file + '/*'):
-				patient_img_paths.append(image_path)
-    
-		total_paths.append(patient_img_paths)
+		for file in glob(str_imgs_path + '/*'):
+			patient_img_paths.append(file)
+        
+        
+		sorted_file_paths = sorted(patient_img_paths, key=extract_number_from_path)
+		total_paths.append(sorted_file_paths)
 		patient_ids.append(data_to_merge_processed["patient_id"][patient_id])
+		series_ids.append(data_to_merge_processed["series_id"][patient_id])
 		category.append(data_to_merge_processed["any_injury"][patient_id])
     
-			final_data = pd.DataFrame(list(zip(patient_ids, total_paths, category)),
-               columns =["Patient_id", "Patient_paths", "Patient_category"])
+	final_data = pd.DataFrame(list(zip(patient_ids, series_ids, total_paths, category)),
+               columns =["Patient_id","Series_id", "Patient_paths", "Patient_category"])
     
 	return final_data
 
@@ -106,10 +113,11 @@ def generate_processed_data(list_img_paths, list_labels, target_size=(128,128), 
 if __name__ == "__main__":
 
 	train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
+	meta_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
 	path = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/'
-	cleaned_df = get_data_for_3d_volumes(train_data, path=path, number_idx=2000)
+	cleaned_df = get_data_for_3d_volumes(meta_data, train_data, path=path, number_idx=2000)
 
-	data_volumes, data_labels = generate_processed_data(cleaned_df["Patient_paths"],cleaned_df["Patient_category"],target_size=(128,128),target_depth=64)
+	data_volumes, data_labels = generate_processed_data(cleaned_df["Patient_paths"], cleaned_df["Patient_category"],target_size=(128,128),target_depth=64)
 
 	with open(f'3D_data_{str(data_volumes.shape[1])}_{str(data_volumes.shape[2])}_{str(data_volumes.shape[3])}.npy', 'wb') as f:
 		np.save(f, data_volumes)
