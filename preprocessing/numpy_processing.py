@@ -5,12 +5,18 @@ import cv2
 from scipy.ndimage import zoom
 from sklearn import preprocessing
 from glob import glob
-
+import re
 """
 This script objective is to process all the images 
 and store them as npy files so these files could be 
 ingested by the model when training
 """
+
+def extract_number_from_path(path):
+    match = re.search(r'(\d+)\.dcm$', path)
+    if match:
+        return int(match.group(1))
+    return 0
 
 def get_data_for_3d_volumes(data, train_data_cat, path, number_idx):
 
