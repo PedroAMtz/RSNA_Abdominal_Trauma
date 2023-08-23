@@ -15,38 +15,51 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import mlflow
-
+import re
 
 # ------------------------------------------ Utility Functions -------------------------------------------------------------------
 
-def get_data_for_3d_volumes(data, path, number_idx):
+def extract_number_from_path(path):
+    match = re.search(r'(\d+)\.dcm$', path)
+    if match:
+        return int(match.group(1))
+    return 0
+
+def get_data_for_3d_volumes(data, train_data_cat, path, number_idx):
+
+    data_to_merge = data[["patient_id", "series_id"]]
+    patient_category = train_data_cat[["patient_id", "any_injury"]]
     
-    data_to_merge = data[["patient_id", "any_injury"]]
-    shuffled_data = data_to_merge.sample(frac=1, random_state=42)
+    merged_df = data_to_merge.merge(patient_category, on='patient_id', how='left')
+    
+    shuffled_data = merged_df.sample(frac=1, random_state=42)
     shuffled_indexes = shuffled_data.index[:number_idx]
     selected_rows = shuffled_data.loc[shuffled_indexes]
     data_to_merge_processed = selected_rows.reset_index()
     
     total_paths = []
     patient_ids = []
+    series_ids = []
     category = []
     
     for patient_id in range(len(data_to_merge_processed)):
     
-        p_id = str(data_to_merge_processed["patient_id"][patient_id])
+        p_id = str(data_to_merge_processed["patient_id"][patient_id]) + "/" + str(data_to_merge_processed["series_id"][patient_id])
         str_imgs_path = path + p_id + '/'
         patient_img_paths = []
 
-        for file in glob(str_imgs_path + '*'):
-            for image_path in glob(file + '/*'):
-                 patient_img_paths.append(image_path)
-    
-        total_paths.append(patient_img_paths)
+        for file in glob(str_imgs_path + '/*'):
+            patient_img_paths.append(file)
+        
+        
+        sorted_file_paths = sorted(patient_img_paths, key=extract_number_from_path)
+        total_paths.append(sorted_file_paths)
         patient_ids.append(data_to_merge_processed["patient_id"][patient_id])
+        series_ids.append(data_to_merge_processed["series_id"][patient_id])
         category.append(data_to_merge_processed["any_injury"][patient_id])
     
-    final_data = pd.DataFrame(list(zip(patient_ids, total_paths, category)),
-               columns =["Patient_id", "Patient_paths", "Patient_category"])
+    final_data = pd.DataFrame(list(zip(patient_ids, series_ids, total_paths, category)),
+               columns =["Patient_id","Series_id", "Patient_paths", "Patient_category"])
     
     return final_data 
 
@@ -70,20 +83,29 @@ class Image3DGenerator(tf.keras.utils.Sequence):
 
     def __len__(self):
         return math.ceil(len(self.x) / self.batch_size)
+    
+    def standardize_pixel_array(self, dcm: pydicom.dataset.FileDataset) -> np.ndarray:
+        # Correct DICOM pixel_array if PixelRepresentation == 1.
+        pixel_array = dcm.pixel_array
+        if dcm.PixelRepresentation == 1:
+            bit_shift = dcm.BitsAllocated - dcm.BitsStored
+            dtype = pixel_array.dtype 
+            pixel_array = (pixel_array << bit_shift).astype(dtype) >>  bit_shift
+        return pixel_array
 
     
     def resize_img(self, img_paths):
         preprocessed_images = []
         for image_path in img_paths: 
             image = pydicom.read_file(image_path)
-            image = image.pixel_array
+            image = self.standardize_pixel_array(image)
             image = cv2.resize(image, self.target_size)
             image_array = np.array(image)
             preprocessed_images.append(image_array)
 
     # Create an empty volume array
         volume_shape = (self.target_size[0], self.target_size[1], len(preprocessed_images)) 
-        volume = np.zeros(volume_shape, dtype=np.uint16)
+        volume = np.zeros(volume_shape, dtype=np.float64)
     # Populate the volume with images
         for i, image_array in enumerate(preprocessed_images):
             volume[:,:,i] = image_array
@@ -116,8 +138,8 @@ class Image3DGenerator(tf.keras.utils.Sequence):
             normalized_volume = self.normalize_volume(resized_images_siz)
             resized_images.append(normalized_volume)
 
-        resized_images = np.array(resized_images)
-        return resized_images, np.array(batch_y)
+        resized_images = np.array(resized_images, dtype=np.float64)
+        return resized_images, np.array(batch_y, dtype=np.float64)
     
 # ---------------------------------- 3D CNN MODEL ---------------------------------------------------------------------------------
 def convolutional_block_3d(inputs, num_filters):
@@ -165,11 +187,11 @@ def build_3d_network(input_shape):
 if __name__ == "__main__":
        
     with mlflow.start_run() as run:
-        mlflow.set_experiment("Experiment_1_V1")
         mlflow.tensorflow.autolog()
 
         run_id = run.info.run_id
-        checkpoint_filepath = 'Experiments_ckpt/experiment_checkpoint.ckpt'
+        
+        checkpoint_filepath = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/Experiments_ckpt/experiment_{}_checkpoint.ckpt'.format(str(run_id))
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
                                                                     save_weights_only=True,
                                                                     monitor='val_accuracy',
@@ -177,11 +199,12 @@ if __name__ == "__main__":
                                                                     save_best_only=True)
 
         train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
+        cat_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
         path = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/'
-        paths = get_data_for_3d_volumes(train_data, path=path, number_idx=450)
+        paths = get_data_for_3d_volumes(train_data, cat_data, path=path, number_idx=1600)
     
-        train_data_gen = Image3DGenerator(paths["Patient_paths"][:400], paths["Patient_category"][:400], batch_size=4)
-        valid_data_gen = Image3DGenerator(paths["Patient_paths"][400:], paths["Patient_category"][400:], batch_size=4)
+        train_data_gen = Image3DGenerator(paths["Patient_paths"][:1500], paths["Patient_category"][:1500], batch_size=4)
+        valid_data_gen = Image3DGenerator(paths["Patient_paths"][1500:], paths["Patient_category"][1500:], batch_size=4)
 
         input_shape = (128, 128, 64, 1)
         model = build_3d_network(input_shape)
@@ -189,5 +212,3 @@ if __name__ == "__main__":
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
-
-        training_plot(['loss', 'acc'], history)
