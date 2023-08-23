@@ -17,6 +17,23 @@ import matplotlib.pyplot as plt
 import mlflow
 import re
 
+# ------------------ DATA GENERATOR ---------------------
+class Image3DGenerator(tf.keras.utils.Sequence):
+
+    def __init__(self, x_set, y_set, batch_size, target_depth=64, target_size=(128,128)):
+        self.x, self.y = x_set, y_set
+        self.batch_size = batch_size
+        self.target_size = target_size
+        self.target_depth = target_depth
+    
+    def __len__(self):
+        return math.ceil(len(self.x) / self.batch_size)
+    
+    def __getitem__(self, idx):
+        batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        return np.array(batch_x), np.array(batch_y)
+
 
 # ------------------------------------------ Utility Functions -------------------------------------------------------------------
 
@@ -135,10 +152,11 @@ if __name__ == "__main__":
                                                                     monitor='val_accuracy',
                                                                     mode='max',
                                                                     save_best_only=True)
+        data_gen = Image3DGenerator(X, y, batch_size=4)
 
         input_shape = (128, 128, 64, 1)
         model = build_3d_network(input_shape)
-        history = model.fit(X[:50], y[:50], batch_size=4, epochs=20, validation_split=0.2, callbacks=[model_checkpoint_callback])
+        history = model.fit(data_gen, batch_size=4, epochs=100, callbacks=[model_checkpoint_callback])
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
