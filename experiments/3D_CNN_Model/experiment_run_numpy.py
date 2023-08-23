@@ -111,13 +111,13 @@ def build_3d_network(input_shape):
 
 if __name__ == "__main__":
 
-    with open('/kaggle/working/3D_data_128_128_64.npy', 'rb') as f:
+    with open('D:/Downloads/rsna-2023-abdominal-trauma-detection/3D_data_128_128_64.npy', 'rb') as f:
         X = np.load(f, allow_pickle=True)
         y = np.load(f, allow_pickle=True)
     print(X.shape, y.shape)
        
     with mlflow.start_run() as run:
-        mlflow.set_experiment("Experiment_1_V1")
+        #mlflow.set_experiment("Experiment_1_V1")
         mlflow.tensorflow.autolog()
 
         run_id = run.info.run_id
@@ -131,7 +131,7 @@ if __name__ == "__main__":
 
         input_shape = (128, 128, 64, 1)
         model = build_3d_network(input_shape)
-        history = model.fit(X, y, batch_size=4, epochs=1000, validation_data=valid_data_gen, callbacks=[model_checkpoint_callback])
+        history = model.fit(X[:15], y[:15], batch_size=4, epochs=10, validation_split=0.2, callbacks=[model_checkpoint_callback])
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
