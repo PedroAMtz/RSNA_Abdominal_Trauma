@@ -93,7 +93,7 @@ def generate_processed_data(list_img_paths, list_labels, target_size=(128,128), 
 	volume_array = np.zeros((num_patients, height, width, depth), dtype=np.float64)
 	labels_array = np.zeros((num_patients), dtype=np.float64)
 
-			print("Initializing data preprocessing with the following dimensions-> Volumes:{} Labels:{}".format(volume_array.shape, labels_array.shape))
+	print("Initializing data preprocessing with the following dimensions-> Volumes:{} Labels:{}".format(volume_array.shape, labels_array.shape))
 
 	for i, list_paths in enumerate(list_img_paths):
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 	train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
 	meta_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
 	path = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/'
-	cleaned_df = get_data_for_3d_volumes(meta_data, train_data, path=path, number_idx=2000)
+	cleaned_df = get_data_for_3d_volumes(meta_data, train_data, path=path, number_idx=100)
 
 	data_volumes, data_labels = generate_processed_data(cleaned_df["Patient_paths"], cleaned_df["Patient_category"],target_size=(128,128),target_depth=64)
 

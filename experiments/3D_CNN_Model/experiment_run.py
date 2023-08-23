@@ -169,8 +169,7 @@ if __name__ == "__main__":
         mlflow.tensorflow.autolog()
 
         run_id = run.info.run_id
-
-        checkpoint_filepath = 'Experiments_ckpt/experiment_{}_checkpoint.ckpt'.format(str(run_id))
+        checkpoint_filepath = 'Experiments_ckpt/experiment_checkpoint.ckpt'
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
                                                                     save_weights_only=True,
                                                                     monitor='val_accuracy',
@@ -179,14 +178,14 @@ if __name__ == "__main__":
 
         train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
         path = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/'
-        paths = get_data_for_3d_volumes(train_data, path=path, number_idx=2000)
+        paths = get_data_for_3d_volumes(train_data, path=path, number_idx=450)
     
-        train_data_gen = Image3DGenerator(paths["Patient_paths"][:1600], paths["Patient_category"][:1600], batch_size=4)
-        valid_data_gen = Image3DGenerator(paths["Patient_paths"][1600:], paths["Patient_category"][1600:], batch_size=4)
+        train_data_gen = Image3DGenerator(paths["Patient_paths"][:400], paths["Patient_category"][:400], batch_size=4)
+        valid_data_gen = Image3DGenerator(paths["Patient_paths"][400:], paths["Patient_category"][400:], batch_size=4)
 
         input_shape = (128, 128, 64, 1)
         model = build_3d_network(input_shape)
-        history = model.fit(train_data_gen, epochs=1000, validation_data=valid_data_gen, callbacks=[model_checkpoint_callback])
+        history = model.fit(train_data_gen, epochs=100, validation_data=valid_data_gen, callbacks=[model_checkpoint_callback])
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
