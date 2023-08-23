@@ -15,9 +15,16 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import mlflow
+import re
 
 
 # ------------------------------------------ Utility Functions -------------------------------------------------------------------
+
+def extract_number_from_path(path):
+    match = re.search(r'(\d+)\.dcm$', path)
+    if match:
+        return int(match.group(1))
+    return 0
 
 def get_data_for_3d_volumes(data, train_data_cat, path, number_idx):
 
