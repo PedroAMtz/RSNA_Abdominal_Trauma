@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
         run_id = run.info.run_id
 
-        checkpoint_filepath = 'Experiments_ckpt/experiment_{}_checkpoint.ckpt'.format(str(run_id))
+        checkpoint_filepath = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/Experiments_ckpt/experiment_{}_checkpoint.ckpt'.format(str(run_id))
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
                                                                     save_weights_only=True,
                                                                     monitor='val_accuracy',
@@ -131,9 +131,9 @@ if __name__ == "__main__":
 
         input_shape = (128, 128, 64, 1)
         model = build_3d_network(input_shape)
-        history = model.fit(X[:15], y[:15], batch_size=4, epochs=10, validation_split=0.2, callbacks=[model_checkpoint_callback])
+        history = model.fit(X[:50], y[:50], batch_size=4, epochs=20, validation_split=0.2, callbacks=[model_checkpoint_callback])
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
 
-        training_plot(['loss', 'acc'], history)
+       #training_plot(['loss', 'acc'], history)
