@@ -89,30 +89,25 @@ def normalize_volume(resized_volume):
 	normalized_volume_image = normalized_flattened_image.reshape(original_shape)
 	return normalized_volume_image
 
-def generate_processed_data(list_img_paths, list_labels, target_size=(128,128), target_depth=64):
+def generate_patient_processed_data(list_img_paths, list_labels, target_size=(128,128), target_depth=64):
 
-	num_patients = len(list_img_paths)
-	height = target_size[0]
-	width = target_size[1]
-	depth = target_depth
+    num_patients = len(list_img_paths)
+    height = target_size[0]
+    width = target_size[1]
+    depth = target_depth
 
-	volume_array = np.zeros((num_patients, height, width, depth), dtype=np.float64)
-	labels_array = np.zeros((num_patients), dtype=np.float64)
+    volume_array = np.zeros((height, width, depth), dtype=np.float64)
+    labels_array = np.array(list_labels, dtype=np.float64)
 
-	print("Initializing data preprocessing with the following dimensions-> Volumes:{} Labels:{}".format(volume_array.shape, labels_array.shape))
+    print("Initializing data preprocessing with the following dimensions-> Volumes:{} Labels:{}".format(volume_array.shape, labels_array.shape))
 
-	for i, list_paths in enumerate(list_img_paths):
+    resized_images = resize_img(list_img_paths, target_size=target_size)
+    siz_volume = change_depth_siz(resized_images)
+    normalized_siz_volume = normalize_volume(siz_volume)
 
-		resized_images = resize_img(list_paths, target_size=target_size)
-		siz_volume = change_depth_siz(resized_images)
-		normalized_siz_volume = normalize_volume(siz_volume)
+    volume_array = normalized_siz_volume
 
-		volume_array[i] = normalized_siz_volume
-		labels_array[i] = list_labels[i]
-		if (i + 1) % 10 == 0:
-			print(f"Iteration {i + 1}: Data Preprocessing running succesfully...")
-
-	return volume_array, labels_array
+    return volume_array, labels_array
 
 
 
@@ -122,9 +117,10 @@ if __name__ == "__main__":
 	meta_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
 	path = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/'
 	cleaned_df = get_data_for_3d_volumes(meta_data, train_data, path=path, number_idx=100)
+	cleaned_df.to_csv("train_data_map.csv")
 
-	data_volumes, data_labels = generate_processed_data(cleaned_df["Patient_paths"], cleaned_df["Patient_category"],target_size=(128,128),target_depth=64)
+	for i in range(len(cleaned_df)):
+    	patient_data_volumes, _ = generate_patient_processed_data(cleaned_df["Patient_paths"][i],cleaned_df["Patient_category"][i], target_size=(128,128),target_depth=64)
 
-	with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/3D_data_{str(data_volumes.shape[1])}_{str(data_volumes.shape[2])}_{str(data_volumes.shape[3])}.npy', 'wb') as f:
-		np.save(f, data_volumes)
-		np.save(f, data_labels)
+    	with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{str(cleaned_df["Patient_id"][i])}_{str(cleaned_df["Series_id"][i])}.npy', 'wb') as f:
+        	np.save(f, patient_data_volumes)
