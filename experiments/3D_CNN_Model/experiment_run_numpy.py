@@ -143,11 +143,6 @@ def build_3d_network(input_shape):
 if __name__ == "__main__":
 
     data = pd.read_csv("train_data_map.csv")
-
-    with open('D:/Downloads/rsna-2023-abdominal-trauma-detection/3D_data_128_128_64.npy', 'rb') as f:
-        X = np.load(f, allow_pickle=True)
-        y = np.load(f, allow_pickle=True)
-    print(X.shape, y.shape)
        
     with mlflow.start_run() as run:
         #mlflow.set_experiment("Experiment_1_V1")
