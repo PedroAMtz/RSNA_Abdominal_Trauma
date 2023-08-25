@@ -20,11 +20,10 @@ import re
 # ------------------ DATA GENERATOR ---------------------
 class Image3DGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, x_set, y_set, batch_size, target_depth=64, target_size=(128,128)):
-        self.x, self.y = x_set, y_set
+    def __init__(self, patient_set, series_set, category_set, batch_size):
+        self.x, self.y = patient_set, category_set
+        self.series = series_set
         self.batch_size = batch_size
-        self.target_size = target_size
-        self.target_depth = target_depth
     
     def __len__(self):
         return math.ceil(len(self.x) / self.batch_size)
@@ -32,7 +31,13 @@ class Image3DGenerator(tf.keras.utils.Sequence):
     def __getitem__(self, idx):
         batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-        return np.array(batch_x), np.array(batch_y)
+        batch_of_volumes = []
+        for patient in range(len(batch_x)):
+            with open(f'/kaggle/working/{self.x[patient]}_{self.series[patient]}.npy', 'rb') as f:
+                X = np.load(f, allow_pickle=True)
+            batch_of_volumes.append(X)
+                
+        return np.array(batch_of_volumes, dtype=np.float64), np.array(batch_y, dtype=np.float64)
 
 
 # ------------------------------------------ Utility Functions -------------------------------------------------------------------
@@ -131,9 +136,13 @@ def build_3d_network(input_shape):
     
     return model
 
+
+
 # -------------------------------------------- Main run ------------------------------------------------------------------------
 
 if __name__ == "__main__":
+
+    data = pd.read_csv("train_data_map.csv")
 
     with open('D:/Downloads/rsna-2023-abdominal-trauma-detection/3D_data_128_128_64.npy', 'rb') as f:
         X = np.load(f, allow_pickle=True)
@@ -152,7 +161,8 @@ if __name__ == "__main__":
                                                                     monitor='val_accuracy',
                                                                     mode='max',
                                                                     save_best_only=True)
-        data_gen = Image3DGenerator(X, y, batch_size=4)
+        
+        data_gen = Image3DGenerator(data["Patient_id"], data["Series_id"], data["Patient_category"] batch_size=4)
 
         input_shape = (128, 128, 64, 1)
         model = build_3d_network(input_shape)
