@@ -10,3 +10,5 @@ def string_to_list(string_repr):
     return eval(string_repr)
 
 df['Patient_paths'] = df['Patient_paths'].apply(string_to_list)
+
+print(df.head())

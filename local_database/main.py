@@ -40,23 +40,27 @@ def get_data_for_3d_volumes(data,train_data_cat, path, number_idx):
         total_paths.append(sorted_file_paths)
         patient_ids.append(data_to_merge_processed["patient_id"][patient_id])
         series_ids.append(data_to_merge_processed["series_id"][patient_id])
-		category.append(data_to_merge_processed["any_injury"][patient_id])
+        category.append(data_to_merge_processed["any_injury"][patient_id])
     
-	final_data = pd.DataFrame(list(zip(patient_ids, series_ids, total_paths, category)),
+    final_data = pd.DataFrame(list(zip(patient_ids, series_ids, total_paths, category)),
                columns =["Patient_id","Series_id", "Patient_paths", "Patient_category"])
     
-	return final_data
+    return final_data
 
 if __name__ == "__main__":
+        
+    conn = sqlite3.connect("training_data.db")
+    print("Cnnection with db succesfull...")
 
-	train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
-	cat_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
-	path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/"
-	cleaned_df = get_data_for_3d_volumes(train_data, cat_data, path=path, number_idx=len(train_data))
-
-	conn = sqlite3.connect("training_data.db")
+    train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
+    cat_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
+    path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/"
+    cleaned_df = get_data_for_3d_volumes(train_data, cat_data, path=path, number_idx=len(train_data))
+    print("Data extraction terminated...")
 
 	# some colum of the database storing lists, must change objecto type in order to store in db
-	cleaned_df["Patient_paths"] = cleaned_df["Patient_paths"].astype(str)
-	cleaned_df.to_sql(name="base_data", con=connection, if_exists="append", index=False)
+    print("Initializing dataframe to table in db...")
+    cleaned_df["Patient_paths"] = cleaned_df["Patient_paths"].astype(str)
+    cleaned_df.to_sql(name="base_data", con=conn, if_exists="append", index=False)
+    print("DB table update finished...")
 
