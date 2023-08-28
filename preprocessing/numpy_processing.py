@@ -56,22 +56,24 @@ def get_data_for_3d_volumes(data, train_data_cat, path, number_idx):
     
 	return final_data
 
-def resize_img(img_paths, target_size=(128, 128)):
-	preprocessed_images = []
-	for image_path in img_paths: 
-		image = pydicom.read_file(image_path)
-		image = image.pixel_array
-		image = cv2.resize(image, target_size)
-		image_array = np.array(image)
-		preprocessed_images.append(image_array)
+def standardize_pixel_array(dcm: pydicom.dataset.FileDataset) -> np.ndarray:
+    # Correct DICOM pixel_array if PixelRepresentation == 1.
+        pixel_array = dcm.pixel_array
+        if dcm.PixelRepresentation == 1:
+            bit_shift = dcm.BitsAllocated - dcm.BitsStored
+            dtype = pixel_array.dtype 
+            pixel_array = (pixel_array << bit_shift).astype(dtype) >> bit_shift
+        return pixel_array
 
-    # Create an empty volume array
-	volume_shape = (target_size[0], target_size[1], len(preprocessed_images)) 
-	volume = np.zeros(volume_shape, dtype=np.uint16)
-    # Populate the volume with images
-	for i, image_array in enumerate(preprocessed_images):
-			volume[:,:,i] = image_array
-	return volume
+def resize_img(img_paths, target_size=(128, 128)):
+        volume_shape = (target_size[0], target_size[1], len(img_paths)) 
+        volume = np.zeros(volume_shape, dtype=np.float64)
+        for i, image_path in enumerate(img_paths): 
+            image = pydicom.read_file(image_path)
+            image = standardize_pixel_array(image)
+            image = cv2.resize(image, target_size)
+            volume[:,:,i] = image
+        return volume
     
 def change_depth_siz(patient_volume, target_depth=64):
 	desired_depth = target_depth
@@ -120,7 +122,7 @@ if __name__ == "__main__":
 	cleaned_df.to_csv("train_data_map.csv")
 
 	for i in range(len(cleaned_df)):
-    	patient_data_volumes, _ = generate_patient_processed_data(cleaned_df["Patient_paths"][i],cleaned_df["Patient_category"][i], target_size=(128,128),target_depth=64)
+		patient_data_volumes, _ = generate_patient_processed_data(cleaned_df["Patient_paths"][i],cleaned_df["Patient_category"][i], target_size=(128,128),target_depth=64)
 
-    	with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{str(cleaned_df["Patient_id"][i])}_{str(cleaned_df["Series_id"][i])}.npy', 'wb') as f:
-        	np.save(f, patient_data_volumes)
+		with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{str(cleaned_df["Patient_id"][i])}_{str(cleaned_df["Series_id"][i])}.npy', 'wb') as f:
+			np.save(f, patient_data_volumes)
