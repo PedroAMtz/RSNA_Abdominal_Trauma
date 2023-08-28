@@ -33,7 +33,7 @@ class Image3DGenerator(tf.keras.utils.Sequence):
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_of_volumes = []
         for patient in range(len(batch_x)):
-            with open(f'/kaggle/working/{self.x[patient]}_{self.series[patient]}.npy', 'rb') as f:
+            with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{self.x[patient]}_{self.series[patient]}.npy', 'rb') as f:
                 X = np.load(f, allow_pickle=True)
             batch_of_volumes.append(X)
                 
@@ -142,7 +142,7 @@ def build_3d_network(input_shape):
 
 if __name__ == "__main__":
 
-    data = pd.read_csv("train_data_map.csv")
+    data = pd.read_csv("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/preprocessing/train_data_map.csv")
        
     with mlflow.start_run() as run:
         #mlflow.set_experiment("Experiment_1_V1")
@@ -157,7 +157,7 @@ if __name__ == "__main__":
                                                                     mode='max',
                                                                     save_best_only=True)
         
-        data_gen = Image3DGenerator(data["Patient_id"], data["Series_id"], data["Patient_category"] batch_size=4)
+        data_gen = Image3DGenerator(data["Patient_id"], data["Series_id"], data["Patient_category"], batch_size=4)
 
         input_shape = (128, 128, 64, 1)
         model = build_3d_network(input_shape)
@@ -166,4 +166,5 @@ if __name__ == "__main__":
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
 
-       #training_plot(['loss', 'acc'], history)
+        training_plot(['loss', 'acc'], history)
+        plt.show()

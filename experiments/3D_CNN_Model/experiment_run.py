@@ -85,36 +85,28 @@ class Image3DGenerator(tf.keras.utils.Sequence):
         return math.ceil(len(self.x) / self.batch_size)
     
     def standardize_pixel_array(self, dcm: pydicom.dataset.FileDataset) -> np.ndarray:
-        # Correct DICOM pixel_array if PixelRepresentation == 1.
+    # Correct DICOM pixel_array if PixelRepresentation == 1.
         pixel_array = dcm.pixel_array
         if dcm.PixelRepresentation == 1:
             bit_shift = dcm.BitsAllocated - dcm.BitsStored
             dtype = pixel_array.dtype 
-            pixel_array = (pixel_array << bit_shift).astype(dtype) >>  bit_shift
+            pixel_array = (pixel_array << bit_shift).astype(dtype) >> bit_shift
         return pixel_array
 
     
     def resize_img(self, img_paths):
-        preprocessed_images = []
-        for image_path in img_paths: 
+        volume_shape = (self.target_size[0], self.target_size[1], len(img_paths)) 
+        volume = np.zeros(volume_shape, dtype=np.float64)
+        for i, image_path in enumerate(img_paths): 
             image = pydicom.read_file(image_path)
             image = self.standardize_pixel_array(image)
             image = cv2.resize(image, self.target_size)
-            image_array = np.array(image)
-            preprocessed_images.append(image_array)
-
-    # Create an empty volume array
-        volume_shape = (self.target_size[0], self.target_size[1], len(preprocessed_images)) 
-        volume = np.zeros(volume_shape, dtype=np.float64)
-    # Populate the volume with images
-        for i, image_array in enumerate(preprocessed_images):
-            volume[:,:,i] = image_array
+            volume[:,:,i] = image
         return volume
     
     def change_depth_siz(self, patient_volume):
-        desired_depth = self.target_depth
         current_depth = patient_volume.shape[-1]
-        depth = current_depth / desired_depth
+        depth = current_depth / self.target_depth
         depth_factor = 1 / depth
         img_new = zoom(patient_volume, (1, 1, depth_factor), mode='nearest')
         return img_new
@@ -131,15 +123,14 @@ class Image3DGenerator(tf.keras.utils.Sequence):
     def __getitem__(self, idx):
         batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-        resized_images = []
-        for list_files in batch_x:
+        resized_shape = (len(batch_x), self.target_size[0], self.target_size[1], self.target_depth)
+        resized_images = np.zeros(resized_shape, dtype=np.float64)
+        for i, list_files in enumerate(batch_x):
             preprocessed_images = self.resize_img(list_files)
             resized_images_siz = self.change_depth_siz(preprocessed_images)
             normalized_volume = self.normalize_volume(resized_images_siz)
-            resized_images.append(normalized_volume)
-
-        resized_images = np.array(resized_images, dtype=np.float64)
-        return resized_images, np.array(batch_y, dtype=np.float64)
+            resized_images[i,:,:,:] = normalized_volume
+        return resized_images, np.array(batch_y)
     
 # ---------------------------------- 3D CNN MODEL ---------------------------------------------------------------------------------
 def convolutional_block_3d(inputs, num_filters):
@@ -201,7 +192,7 @@ if __name__ == "__main__":
         train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
         cat_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
         path = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/'
-        paths = get_data_for_3d_volumes(train_data, cat_data, path=path, number_idx=1600)
+        paths = get_data_for_3d_volumes(cat_data, train_data, path=path, number_idx=1600)
     
         train_data_gen = Image3DGenerator(paths["Patient_paths"][:1500], paths["Patient_category"][:1500], batch_size=4)
         valid_data_gen = Image3DGenerator(paths["Patient_paths"][1500:], paths["Patient_category"][1500:], batch_size=4)
