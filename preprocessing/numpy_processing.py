@@ -6,6 +6,7 @@ from scipy.ndimage import zoom
 from sklearn import preprocessing
 from glob import glob
 import re
+import sqlite3
 """
 This script objective is to process all the images 
 and store them as npy files so these files could be 
@@ -114,15 +115,20 @@ def generate_patient_processed_data(list_img_paths, list_labels, target_size=(12
 
 
 if __name__ == "__main__":
-
+	conn = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
 	train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
 	meta_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
 	path = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/'
-	cleaned_df = get_data_for_3d_volumes(meta_data, train_data, path=path, number_idx=100)
-	cleaned_df.to_csv("train_data_map.csv")
+
+	num_idx = 30
+
+	cleaned_df = get_data_for_3d_volumes(meta_data, train_data, path=path, number_idx=num_idx)
+	df_to_sql = cleaned_df.copy() 
+	df_to_sql["Patient_paths"] = df_to_sql["Patient_paths"].astype(str)
+	df_to_sql.to_sql(name=f"training_data_{str(num_idx)}", con=conn, if_exists="replace", index=False)
 
 	for i in range(len(cleaned_df)):
 		patient_data_volumes, _ = generate_patient_processed_data(cleaned_df["Patient_paths"][i],cleaned_df["Patient_category"][i], target_size=(128,128),target_depth=64)
 
-		with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{str(cleaned_df["Patient_id"][i])}_{str(cleaned_df["Series_id"][i])}.npy', 'wb') as f:
+		with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128_pilot/{str(cleaned_df["Patient_id"][i])}_{str(cleaned_df["Series_id"][i])}.npy', 'wb') as f:
 			np.save(f, patient_data_volumes)
