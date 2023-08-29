@@ -25,9 +25,9 @@ def training_plot(metrics, history):
 
 if __name__ == "__main__":
 
-    connection = sqlite3.connect("training_data.db")
-
-    sql = pd.read_sql_query("SELECT * FROM base_data", connection)
+    connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
+    # ATTENTION ABOUT THE TABLE FROM THE DB YOU CONNECT!!
+    sql = pd.read_sql_query("SELECT * FROM training_data_30", connection)
     data = pd.DataFrame(sql, columns =["Patient_id", "Series_id", "Patient_paths", "Patient_category"])
     data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
        
@@ -42,10 +42,9 @@ if __name__ == "__main__":
                                                                     save_weights_only=True)
         
         data_gen = NumpyImage3DGenerator(data["Patient_id"], data["Series_id"], data["Patient_category"], batch_size=4)
-
         input_shape = (128, 128, 64, 1)
         model = ThreeDCNN(input_shape).model
-        history = model.fit(data_gen, batch_size=4, epochs=100, callbacks=[model_checkpoint_callback])
+        history = model.fit(data_gen, batch_size=4, epochs=50, callbacks=[model_checkpoint_callback])
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
