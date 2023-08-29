@@ -86,6 +86,6 @@ class NumpyImage3DGenerator(tf.keras.utils.Sequence):
                     X = np.load(f, allow_pickle=True)
                 batch_of_volumes.append(X)
             except:
-                print(f"Patient Volume or Series not found {self.x[patient]}, {self.series[patient]}")
+                continue
                 
         return np.array(batch_of_volumes, dtype=np.float64), np.array(batch_y, dtype=np.float64)
