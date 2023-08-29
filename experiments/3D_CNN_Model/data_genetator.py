@@ -1,4 +1,13 @@
-class Image3DGenerator(tf.keras.utils.Sequence):
+import tensorflow as tf 
+import pydicom
+import cv2
+from scipy.ndimage import zoom
+from sklearn import preprocessing
+import math
+import numpy as np
+
+
+class RawImage3DGenerator(tf.keras.utils.Sequence):
     def __init__(self, x_set, y_set, batch_size, target_depth=64, target_size=(128,128)):
         self.x, self.y = x_set, y_set
         self.batch_size = batch_size
@@ -55,3 +64,28 @@ class Image3DGenerator(tf.keras.utils.Sequence):
             normalized_volume = self.normalize_volume(resized_images_siz)
             resized_images[i,:,:,:] = normalized_volume
         return resized_images, np.array(batch_y)
+
+
+class NumpyImage3DGenerator(tf.keras.utils.Sequence):
+
+    def __init__(self, patient_set, series_set, category_set, batch_size):
+        self.x, self.y = patient_set, category_set
+        self.series = series_set
+        self.batch_size = batch_size
+    
+    def __len__(self):
+        return math.ceil(len(self.x) / self.batch_size)
+    
+    def __getitem__(self, idx):
+        batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_of_volumes = []
+        for patient in range(len(batch_x)):
+            try:
+                with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{self.x[patient]}_{self.series[patient]}.npy', 'rb') as f:
+                    X = np.load(f, allow_pickle=True)
+                batch_of_volumes.append(X)
+            except:
+                print(f"Patient Volume or Series not found {self.x[patient]}, {self.series[patient]}")
+                
+        return np.array(batch_of_volumes, dtype=np.float64), np.array(batch_y, dtype=np.float64)
