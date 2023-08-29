@@ -39,10 +39,7 @@ if __name__ == "__main__":
 
         checkpoint_filepath = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/Experiments_ckpt/experiment_{}_checkpoint.ckpt'.format(str(run_id))
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
-                                                                    save_weights_only=True,
-                                                                    monitor='val_accuracy',
-                                                                    mode='max',
-                                                                    save_best_only=True)
+                                                                    save_weights_only=True)
         
         data_gen = NumpyImage3DGenerator(data["Patient_id"], data["Series_id"], data["Patient_category"], batch_size=4)
 
@@ -53,5 +50,6 @@ if __name__ == "__main__":
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
 
-        training_plot(['loss', 'acc'], history)
-        plt.show()
+        # Need to get validation data
+        #training_plot(['loss', 'acc'], history)
+        #plt.show()
