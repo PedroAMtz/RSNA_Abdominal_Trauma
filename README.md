@@ -7,3 +7,7 @@
 **About the evaluation metric:** https://www.kaggle.com/code/metric/rsna-trauma-metric/notebook
 
 **Final date for submission:** _October 13, 2023_
+
+### Experiment Architecture
+---
+!["Imagen de arquitectura de experimentos"](/Flujo_experimentos.png)
