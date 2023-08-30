@@ -67,8 +67,9 @@ def window_converter(image, window_width=400, window_level=50):
     return window_image
 
 def transform_to_hu(medical_image, image):
-    intercept = medical_image.RescaleIntercept
-    slope = medical_image.RescaleSlope
+    meta_image = pydicom.dcmread(medical_image)
+    intercept = meta_image.RescaleIntercept
+    slope = meta_image.RescaleSlope
     hu_image = image * slope + intercept
     return hu_image
 
@@ -148,5 +149,5 @@ if __name__ == "__main__":
 	for i in range(len(data)):
 		patient_data_volumes, _ = generate_patient_processed_data(data["Patient_paths"][i],data["Patient_category"][i], target_size=(128,128),target_depth=64)
 
-		with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128_pilot/{str(data["Patient_id"][i])}_{str(data["Series_id"][i])}.npy', 'wb') as f:
+		with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{str(data["Patient_id"][i])}_{str(data["Series_id"][i])}.npy', 'wb') as f:
 			np.save(f, patient_data_volumes)
