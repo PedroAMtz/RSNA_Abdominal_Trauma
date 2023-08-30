@@ -57,6 +57,21 @@ def get_data_for_3d_volumes(data, train_data_cat, path, number_idx):
     
 	return final_data
 
+def window_converter(image, window_width=400, window_level=50):      
+    img_min = window_level - window_width // 2
+    img_max = window_level + window_width // 2
+    window_image = image.copy()
+    window_image[window_image < img_min] = img_min
+    window_image[window_image > img_max] = img_max
+    #image = (image / image.max() * 255).astype(np.float64)
+    return window_image
+
+def transform_to_hu(medical_image, image):
+    intercept = medical_image.RescaleIntercept
+    slope = medical_image.RescaleSlope
+    hu_image = image * slope + intercept
+    return hu_image
+
 def standardize_pixel_array(dcm: pydicom.dataset.FileDataset) -> np.ndarray:
     # Correct DICOM pixel_array if PixelRepresentation == 1.
         pixel_array = dcm.pixel_array
@@ -69,10 +84,12 @@ def standardize_pixel_array(dcm: pydicom.dataset.FileDataset) -> np.ndarray:
 def resize_img(img_paths, target_size=(128, 128)):
         volume_shape = (target_size[0], target_size[1], len(img_paths)) 
         volume = np.zeros(volume_shape, dtype=np.float64)
-        for i, image_path in enumerate(img_paths): 
+        for i, image_path in enumerate(img_paths):
             image = pydicom.read_file(image_path)
             image = standardize_pixel_array(image)
-            image = cv2.resize(image, target_size)
+            hu_image = transform_to_hu(image_path, image)
+            window_image = window_converter(hu_image)
+            image = cv2.resize(window_image, target_size)
             volume[:,:,i] = image
         return volume
     
@@ -112,23 +129,24 @@ def generate_patient_processed_data(list_img_paths, list_labels, target_size=(12
 
     return volume_array, labels_array
 
+def string_to_list(string_repr):
+    return eval(string_repr)
 
 
 if __name__ == "__main__":
-	conn = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
-	train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
-	meta_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
-	path = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/'
+	connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
+    # ATTENTION ABOUT THE TABLE FROM THE DB YOU CONNECT!!
+	sql = pd.read_sql_query("SELECT * FROM base_data", connection)
+	data = pd.DataFrame(sql, columns =["Patient_id", "Series_id", "Patient_paths", "Patient_category"])
+	data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
 
-	num_idx = 30
+	#cleaned_df = get_data_for_3d_volumes(meta_data, train_data, path=path, number_idx=num_idx)
+	#df_to_sql = cleaned_df.copy() 
+	#df_to_sql["Patient_paths"] = df_to_sql["Patient_paths"].astype(str)
+	#df_to_sql.to_sql(name=f"training_data_{str(num_idx)}", con=conn, if_exists="replace", index=False)
 
-	cleaned_df = get_data_for_3d_volumes(meta_data, train_data, path=path, number_idx=num_idx)
-	df_to_sql = cleaned_df.copy() 
-	df_to_sql["Patient_paths"] = df_to_sql["Patient_paths"].astype(str)
-	df_to_sql.to_sql(name=f"training_data_{str(num_idx)}", con=conn, if_exists="replace", index=False)
+	for i in range(len(data)):
+		patient_data_volumes, _ = generate_patient_processed_data(data["Patient_paths"][i],data["Patient_category"][i], target_size=(128,128),target_depth=64)
 
-	for i in range(len(cleaned_df)):
-		patient_data_volumes, _ = generate_patient_processed_data(cleaned_df["Patient_paths"][i],cleaned_df["Patient_category"][i], target_size=(128,128),target_depth=64)
-
-		with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128_pilot/{str(cleaned_df["Patient_id"][i])}_{str(cleaned_df["Series_id"][i])}.npy', 'wb') as f:
+		with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128_pilot/{str(data["Patient_id"][i])}_{str(data["Series_id"][i])}.npy', 'wb') as f:
 			np.save(f, patient_data_volumes)
