@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 import mlflow
 import sqlite3
 import re
-from data_genetator import NumpyImage3DGenerator
+from data_genetator import NumpyImage3DGenerator, NumpyImage3DGeneratorVal
 from model_cnn import ThreeDCNN
+import numpy as np
 
 # ------------------------------------------ Utility Functions -------------------------------------------------------------------
 def string_to_list(string_repr):
@@ -27,10 +28,19 @@ if __name__ == "__main__":
 
     connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
     # ATTENTION ABOUT THE TABLE FROM THE DB YOU CONNECT!!
-    sql = pd.read_sql_query("SELECT * FROM training_data_30", connection)
+    sql = pd.read_sql_query("SELECT * FROM base_data", connection)
     data = pd.DataFrame(sql, columns =["Patient_id", "Series_id", "Patient_paths", "Patient_category"])
     data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
-       
+
+    #np.random.seed(10)
+
+    #rnd = np.random.rand(len(data))
+    #train = data[rnd<0.8]
+    #test = data[(rnd>=0.8)]
+    
+    #train = train.reset_index(drop=True)
+    #est = test.reset_index(drop=True)
+
     with mlflow.start_run() as run:
         #mlflow.set_experiment("Experiment_1_V1")
         mlflow.tensorflow.autolog()
@@ -41,10 +51,13 @@ if __name__ == "__main__":
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
                                                                     save_weights_only=True)
         
-        data_gen = NumpyImage3DGenerator(data["Patient_id"], data["Series_id"], data["Patient_category"], batch_size=4)
+        data_gen = NumpyImage3DGenerator(data["Patient_id"], data["Series_id"], data["Patient_category"], batch_size=3)
+        #data_gen_test = NumpyImage3DGeneratorVal(test["Patient_id"], test["Series_id"], batch_size=4)
+        #print(data_gen[0])
+        #print(data_gen_test[0].shape)
         input_shape = (128, 128, 64, 1)
         model = ThreeDCNN(input_shape).model
-        history = model.fit(data_gen, batch_size=4, epochs=50, callbacks=[model_checkpoint_callback])
+        history = model.fit(data_gen, epochs=1000, callbacks=[model_checkpoint_callback])
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
