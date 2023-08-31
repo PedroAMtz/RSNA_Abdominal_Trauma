@@ -89,3 +89,23 @@ class NumpyImage3DGenerator(tf.keras.utils.Sequence):
                 continue
                 
         return np.array(batch_of_volumes, dtype=np.float64), np.array(batch_y, dtype=np.float64)
+    
+class NumpyImage3DGeneratorVal():
+
+    def __init__(self, patient_set, series_set, batch_size):
+        self.x_v = patient_set
+        self.series_v  = series_set
+        self.batch_size_v = batch_size
+    
+    def __len__(self):
+        return math.ceil(len(self.x_v) / self.batch_size_v)
+    
+    def __getitem__(self, idx):
+        batch_x_v = self.x_v[idx * self.batch_size_v:(idx + 1) * self.batch_size_v]
+        batch_of_volumes_v = []
+        for x in range(len(batch_x_v)):
+            with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{self.x_v[x]}_{self.series_v[x]}.npy', 'rb') as f:
+                X = np.load(f, allow_pickle=True)
+            batch_of_volumes_v.append(X)
+                
+        return np.array(batch_of_volumes_v, dtype=np.float64)
