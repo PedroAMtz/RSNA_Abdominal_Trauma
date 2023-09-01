@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import mlflow
 import sqlite3
 import re
-from data_genetator import NumpyImage3DGenerator, NumpyImage3DGeneratorVal
+from data_genetator import NumpyImage3DGenerator
 from model_cnn import ThreeDCNN
 import numpy as np
 
@@ -22,25 +22,43 @@ def training_plot(metrics, history):
         ax[idx].plot(history.history['val_' + metric]);
         ax[idx].legend([metric, 'val_' + metric])
 
+# ------------------------------------- Learning rate schedule ----------------------------------
+
+def decay(epoch):
+  if epoch < 3:
+    return 1e-3
+  elif epoch >= 3 and epoch < 7:
+    return 1e-4
+  else:
+    return 1e-5
+
+class PrintLR(tf.keras.callbacks.Callback):
+  def on_epoch_end(self, epoch, logs=None):
+    print('\nLearning rate for epoch {} is {}'.format(epoch + 1,
+                                                      model.optimizer.lr.numpy()))
 # -------------------------------------------- Main run ------------------------------------------------------------------------
 
 if __name__ == "__main__":
 
     connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
     # ATTENTION ABOUT THE TABLE FROM THE DB YOU CONNECT!!
-    sql = pd.read_sql_query("SELECT * FROM base_data", connection)
-    data = pd.DataFrame(sql, columns =["Patient_id", "Series_id", "Patient_paths", "Patient_category"])
-    data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
+    sql = pd.read_sql_query("SELECT * FROM balanced_data", connection)
+    data = pd.DataFrame(sql, columns =["Patient_id", "Series_id", "Patient_category"])
+    #data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
 
-    #np.random.seed(10)
 
-    #rnd = np.random.rand(len(data))
-    #train = data[rnd<0.8]
-    #test = data[(rnd>=0.8)]
+    np.random.seed(10)
+
+    rnd = np.random.rand(len(data))
+    train = data[rnd<0.9]
+    test = data[(rnd>=0.9)]
     
-    #train = train.reset_index(drop=True)
-    #est = test.reset_index(drop=True)
-
+    train = train.reset_index(drop=True)
+    test = test.reset_index(drop=True)
+    print(len(data), len(train), len(test))
+    print(train)
+    print(test)
+    
     with mlflow.start_run() as run:
         #mlflow.set_experiment("Experiment_1_V1")
         mlflow.tensorflow.autolog()
@@ -51,13 +69,20 @@ if __name__ == "__main__":
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
                                                                     save_weights_only=True)
         
-        data_gen = NumpyImage3DGenerator(data["Patient_id"], data["Series_id"], data["Patient_category"], batch_size=3)
-        #data_gen_test = NumpyImage3DGeneratorVal(test["Patient_id"], test["Series_id"], batch_size=4)
+        early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor='acc', patience=20)
+
+        callbacks = [model_checkpoint_callback,
+                     early_stop_callback,
+                     tf.keras.callbacks.LearningRateScheduler(decay),
+                     PrintLR()]
+
+        data_gen = NumpyImage3DGenerator(train["Patient_id"], train["Series_id"], train["Patient_category"], batch_size=4)
+        data_gen_test = NumpyImage3DGenerator(test["Patient_id"], test["Series_id"],test["Patient_category"], batch_size=4)
         #print(data_gen[0])
         #print(data_gen_test[0].shape)
         input_shape = (128, 128, 64, 1)
         model = ThreeDCNN(input_shape).model
-        history = model.fit(data_gen, epochs=1000, callbacks=[model_checkpoint_callback])
+        history = model.fit(data_gen, validation_data=data_gen_test, epochs=1000, callbacks=callbacks)
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id
@@ -65,3 +90,4 @@ if __name__ == "__main__":
         # Need to get validation data
         #training_plot(['loss', 'acc'], history)
         #plt.show()
+        
