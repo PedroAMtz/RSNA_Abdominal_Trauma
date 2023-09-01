@@ -26,8 +26,8 @@ class ThreeDCNN:
         return output_layer
     
     def compile_model(self, model):
-        optimizer = SGD(learning_rate=1e-06, momentum=0.99, decay=0.0, nesterov=False)
-        model.compile(loss='mae', optimizer=optimizer, metrics=['acc'])
+        #optimizer = SGD(learning_rate=1e-06, momentum=0.99, decay=0.0, nesterov=False)
+        model.compile(loss='mae', optimizer=tf.keras.optimizers.Adam(), metrics=['acc'])
     
     def summary(self):
         self.model.summary()
