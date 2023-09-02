@@ -32,6 +32,21 @@ def decay(epoch):
   else:
     return 1e-5
 
+def scheduler(epoch, lr):
+    if epoch <= 8:
+        return lr
+    else:
+        return lr * tf.math.exp(-0.1)
+
+def create_pattern(data):
+    pattern = [1, 1, 0, 0]  # Define the pattern (two ones, followed by two zeros)
+    result = []
+    
+    while len(result) < len(data):
+        result.extend(pattern)
+    
+    return result[:len(data)]
+
 class PrintLR(tf.keras.callbacks.Callback):
   def on_epoch_end(self, epoch, logs=None):
     print('\nLearning rate for epoch {} is {}'.format(epoch + 1,
@@ -55,9 +70,19 @@ if __name__ == "__main__":
     
     train = train.reset_index(drop=True)
     test = test.reset_index(drop=True)
-    print(len(data), len(train), len(test))
-    print(train)
-    print(test)
+
+    train['pattern'] = create_pattern(train)
+    train.sort_values(by=['pattern'], inplace=True)
+    train.reset_index(drop=True, inplace=True)
+
+    #input_shape = (128, 128, 64, 1)
+    #model = ThreeDCNN(input_shape).model
+    #model.summary()
+
+
+    #print(len(data), len(train), len(test))
+    #print(train.head(30))
+    #print(test)
     
     with mlflow.start_run() as run:
         #mlflow.set_experiment("Experiment_1_V1")
@@ -72,8 +97,7 @@ if __name__ == "__main__":
         early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor='acc', patience=20)
 
         callbacks = [model_checkpoint_callback,
-                     early_stop_callback,
-                     tf.keras.callbacks.LearningRateScheduler(decay),
+                     tf.keras.callbacks.LearningRateScheduler(scheduler),
                      PrintLR()]
 
         data_gen = NumpyImage3DGenerator(train["Patient_id"], train["Series_id"], train["Patient_category"], batch_size=4)
@@ -90,4 +114,3 @@ if __name__ == "__main__":
         # Need to get validation data
         #training_plot(['loss', 'acc'], history)
         #plt.show()
-        
