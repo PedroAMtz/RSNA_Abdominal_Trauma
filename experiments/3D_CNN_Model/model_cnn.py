@@ -20,14 +20,19 @@ class ThreeDCNN:
         return x
 
     def dense_block(self, flatten_layer):
-        dense_layer_1 = Dense(units=512, activation='relu')(flatten_layer)
+
+        initializer = tf.keras.initializers.RandomNormal(mean=0., stddev=1.)
+
+        dense_layer_1 = Dense(units=512, kernel_initializer=initializer, activation='relu')(flatten_layer)
         dense_layer_1 = Dropout(0.4)(dense_layer_1)
-        output_layer = Dense(units=2, activation='softmax')(dense_layer_1)
+        dense_layer_2 = Dense(units=256, activation='relu')(dense_layer_1)
+        dense_layer_2 = Dropout(0.4)(dense_layer_2)
+        output_layer = Dense(units=1, activation='sigmoid')(dense_layer_2)
         return output_layer
     
     def compile_model(self, model):
         #optimizer = SGD(learning_rate=1e-06, momentum=0.99, decay=0.0, nesterov=False)
-        model.compile(loss='mae', optimizer=tf.keras.optimizers.Adam(), metrics=['acc'])
+        model.compile(loss="mae", optimizer=tf.keras.optimizers.Adam(), metrics=['acc'])
     
     def summary(self):
         self.model.summary()
