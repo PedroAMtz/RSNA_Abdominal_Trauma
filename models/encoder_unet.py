@@ -46,8 +46,9 @@ def build_unet_encoder_model(input_shape):
 	s4, p4 = encoder_block(p3, units*4)
 
 	b1 = conv_block(p4, units*8)
+	b2 = Flatten()(b1)
 
-	encoder_output = b1
+	encoder_output = b2
 
 	return Model(inputs, encoder_output)
 
@@ -55,7 +56,7 @@ def build_unet_encoder_model(input_shape):
 
 if __name__ == "__main__":
 
-	input_shape = (128, 128, 3)
+	input_shape = (128, 128, 1)
 	num_classes = 2
 
 	encoder = build_unet_encoder_model(input_shape)
