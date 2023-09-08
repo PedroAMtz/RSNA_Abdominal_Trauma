@@ -128,26 +128,27 @@ def training_plot(metrics, history):
         ax[idx].legend([metric, 'val_' + metric])
 
 if __name__	== "__main__":
-    
-	metadata_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv"
-	segmentations_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/segmentations"
-	train_metadata = pd.read_csv(metadata_path)
-	segmentations = os.listdir(segmentations_path)
-	segmentations = [int(os.path.splitext(segmentation)[0]) for segmentation in segmentations]
-
-
-	series = train_metadata["series_id"].tolist()
-
-	matched_series = []
-	for segmentation in segmentations:
-		if segmentation in series:
-			matched_series.append(segmentation)
-		else:
-			continue
-	patients_segment = train_metadata[train_metadata["series_id"].isin(matched_series)].reset_index(drop=True)
-	dcm_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/"
-	niftii_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/segmentations/"
-	cleaned_data = get_data_for_3d_volumes(patients_segment, dcm_path, niftii_path)
+  
+  metadata_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv"
+  segmentations_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/segmentations"
+  train_metadata = pd.read_csv(metadata_path)
+  segmentations = os.listdir(segmentations_path)
+  segmentations = [int(os.path.splitext(segmentation)[0]) for segmentation in segmentations]
+  
+  series = train_metadata["series_id"].tolist()
+  
+  matched_series = []
+  for segmentation in segmentations:
+    if segmentation in series:
+      matched_series.append(segmentation)
+    else:
+      continue
+  
+  patients_segment = train_metadata[train_metadata["series_id"].isin(matched_series)].reset_index(drop=True)
+  dcm_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/"
+  niftii_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/segmentations/"
+  cleaned_data = get_data_for_3d_volumes(patients_segment, dcm_path, niftii_path)
+  print(cleaned_data.head())
 
 with mlflow.start_run() as run:
     run_id = run.info.run_id
