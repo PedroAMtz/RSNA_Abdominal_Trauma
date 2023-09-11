@@ -75,8 +75,8 @@ if __name__ == "__main__":
     train.sort_values(by=['pattern'], inplace=True)
     train.reset_index(drop=True, inplace=True)
 
-    #input_shape = (128, 128, 64, 1)
-    #model = ThreeDCNN(input_shape).model
+    input_shape = (128, 128, 64, 1)
+    model = ThreeDCNN(input_shape).model
     #model.summary()
 
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         #print(data_gen_test[0].shape)
         input_shape = (128, 128, 64, 1)
         model = ThreeDCNN(input_shape).model
-        history = model.fit(data_gen, validation_data=data_gen_test, epochs=1000, callbacks=callbacks)
+        history = model.fit(data_gen, validation_data=data_gen_test, epochs=100, callbacks=callbacks)
         
         assert mlflow.active_run()
         assert mlflow.active_run().info.run_id == run.info.run_id

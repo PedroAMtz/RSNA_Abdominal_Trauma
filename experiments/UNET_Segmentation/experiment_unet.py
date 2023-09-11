@@ -87,14 +87,18 @@ def training_plot(metrics, history):
         ax[idx].plot(history.history['val_' + metric]);
         ax[idx].legend([metric, 'val_' + metric])
 
+def string_to_list(string_repr):
+    return eval(string_repr)
+
 if __name__	== "__main__":
 
   connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
   sql = pd.read_sql_query("SELECT * FROM segmentations_data", connection)
   cleaned_data = pd.DataFrame(sql, columns =["patient_id","series_id", "patient_paths", "patient_segmentation"])
+  cleaned_data["patient_paths"] = cleaned_data["patient_paths"].apply(string_to_list)
   print(cleaned_data.head())
 
-
+"""
 with mlflow.start_run() as run:
     run_id = run.info.run_id
     mlflow.tensorflow.autolog()
@@ -134,3 +138,4 @@ with mlflow.start_run() as run:
     
     assert mlflow.active_run()
     assert mlflow.active_run().info.run_id == run.info.run_id
+"""
