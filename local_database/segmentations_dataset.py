@@ -67,5 +67,7 @@ if __name__ == "__main__":
     dcm_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/"
     niftii_path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/segmentations/"
     cleaned_data = get_data_for_3d_volumes(patients_segment, dcm_path, niftii_path)
+    cleaned_data["patient_paths"] = cleaned_data["patient_paths"].astype(str)
 
     cleaned_data.to_sql(name="segmentations_data", con=connection, if_exists="append", index=False)
+    print("DB table update finished...")
