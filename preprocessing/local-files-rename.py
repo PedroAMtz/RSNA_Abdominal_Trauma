@@ -23,8 +23,8 @@ def rename_files(directory_path, files, extension=".nii"):
 				os.rename(old_name, new_name)
 				print(f"Renamed: {file} -> {new_file_name}")
 			except Exception as e:
-            	print(f"Error renaming {file}: {str(e)}")
-            	continue
+				print(f"Error renaming {file}: {str(e)}")
+				continue
 
 if __name__ == "__main__":
 
