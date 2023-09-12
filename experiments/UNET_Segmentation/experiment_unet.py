@@ -90,6 +90,45 @@ def training_plot(metrics, history):
 def string_to_list(string_repr):
     return eval(string_repr)
 
+def generate_data_volumes(data, idx):
+  volume_dcm = []
+  volume_nii = []
+
+  for i in range(idx):
+    volume_img, volume_seg = generate_patient_processed_data(data["patient_paths"][i], data["patient_segmentation"][i])
+    
+    volume_dcm.append(volume_img)
+    volume_nii.append(volume_seg)
+  
+  volume_of_imgs = np.concatenate(volume_dcm, axis=2)
+  volume_of_segs = np.concatenate(volume_nii, axis=2)
+
+  return volume_of_imgs, volume_of_segs
+
+def compute_class_weights_and_encode_masks(volume_segmentations):
+   
+  n, h, w, _ = volume_segmentations.shape
+  train_masks_reshaped = volume_segmentations.reshape(-1,1)
+  train_masks_reshaped_encoded = labelencoder.fit_transform(train_masks_reshaped.ravel())
+  train_masks_encoded_original_shape = train_masks_reshaped_encoded.reshape(n, h, w)
+  number_classes = len(np.unique(train_masks_reshaped_encoded))
+  class_weights = class_weight.compute_class_weight('balanced',
+                                                 classes = np.unique(train_masks_reshaped_encoded),
+                                                 y = train_masks_reshaped_encoded)
+
+  return train_masks_encoded_original_shape, number_classes, class_weights
+
+def transpose_and_expand_data(volume_images, volume_masks_encoded):
+  transposed_volume_dcm = np.transpose(volume_images, (2, 0, 1))
+  transpose_volume_nii = np.transpose(volume_masks_encoded, (2, 0, 1))
+
+  transposed_volume_dcm = np.expand_dims(transposed_volume_dcm, axis=3)
+  transpose_volume_nii = np.expand_dims(transpose_volume_nii, axis=3)
+
+  return transposed_volume_dcm, transpose_volume_nii
+   
+
+
 if __name__	== "__main__":
 
   connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
@@ -98,39 +137,34 @@ if __name__	== "__main__":
   cleaned_data["patient_paths"] = cleaned_data["patient_paths"].apply(string_to_list)
   print(cleaned_data.head())
 
-"""
-with mlflow.start_run() as run:
+  labelencoder = LabelEncoder()
+
+  with mlflow.start_run() as run:
     run_id = run.info.run_id
     mlflow.tensorflow.autolog()
-    volume_of_imgs, volume_of_segs = generate_patient_processed_data(cleaned_data["patient_paths"][0], cleaned_data["patient_segmentation"][0])
-    labelencoder = LabelEncoder()
-    
-    n, h, w, _ = volume_of_segs.shape
-    train_masks_reshaped = volume_of_segs.reshape(-1,1)
-    train_masks_reshaped_encoded = labelencoder.fit_transform(train_masks_reshaped.ravel())
-    train_masks_encoded_original_shape = train_masks_reshaped_encoded.reshape(n, h, w)
-    number_classes = len(np.unique(train_masks_reshaped_encoded))
-    class_weights = class_weight.compute_class_weight('balanced',
-                                                 classes = np.unique(train_masks_reshaped_encoded),
-                                                 y = train_masks_reshaped_encoded)
-    
 
-    X_train , X_test, y_train, y_test = train_test_split(volume_of_imgs, volume_of_segs, test_size = 0.10, random_state = 0)
-    train_masks_cat = to_categorical(y_train, num_classes=number_classes)
-    y_train_cat = train_masks_cat.reshape((y_train.shape[0], y_train.shape[1], y_train.shape[2], number_classes))
-    test_masks_cat = to_categorical(y_test, num_classes=number_classes)
-    y_test_cat = test_masks_cat.reshape((y_test.shape[0], y_test.shape[1], y_test.shape[2], number_classes))
+    volume_of_imgs, volume_of_segs = generate_data_volumes(data=cleaned_data, idx=100)
+
+    encoded_masks, num_classes, weights = compute_class_weights_and_encode_masks(volume_of_segs)
+
+    volume_images_cleaned, volume_segs_cleaned = transpose_and_expand_data(volume_images=volume_of_imgs, volume_masks_encoded=encoded_masks)
+
+    X_train , X_test, y_train, y_test = train_test_split(volume_images_cleaned, volume_segs_cleaned, test_size = 0.10, random_state = 0)
+    train_masks_cat = to_categorical(y_train, num_classes=num_classes)
+    y_train_cat = train_masks_cat.reshape((y_train.shape[0], y_train.shape[1], y_train.shape[2], num_classes))
+    test_masks_cat = to_categorical(y_test, num_classes=num_classes)
+    y_test_cat = test_masks_cat.reshape((y_test.shape[0], y_test.shape[1], y_test.shape[2], num_classes))
     
 
     input_shape = (128, 128, 1)
     Unet = build_unet_model(input_shape)
     
 
-    Unet.compile(optimizer='adam', loss=weightedLoss(tf.keras.losses.categorical_crossentropy, class_weights), metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=number_classes)])
+    Unet.compile(optimizer='adam', loss=weightedLoss(tf.keras.losses.categorical_crossentropy, weights), metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=num_classes)])
     history = Unet.fit(X_train, y_train_cat, 
                     batch_size = 32, 
                     verbose=1, 
-                    epochs=50, 
+                    epochs=70, 
                     validation_data=(X_test, y_test_cat), 
                     shuffle=False)
     
@@ -138,4 +172,3 @@ with mlflow.start_run() as run:
     
     assert mlflow.active_run()
     assert mlflow.active_run().info.run_id == run.info.run_id
-"""
