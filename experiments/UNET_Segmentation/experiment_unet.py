@@ -105,8 +105,7 @@ def generate_data_volumes(data, idx):
 
   return volume_of_imgs, volume_of_segs
 
-def compute_class_weights_and_encode_masks(volume_segmentations):
-   
+def compute_class_weights_and_encode_masks(volume_segmentations):  
   n, h, w, _ = volume_segmentations.shape
   train_masks_reshaped = volume_segmentations.reshape(-1,1)
   train_masks_reshaped_encoded = labelencoder.fit_transform(train_masks_reshaped.ravel())
@@ -135,21 +134,22 @@ if __name__	== "__main__":
   sql = pd.read_sql_query("SELECT * FROM segmentations_data", connection)
   cleaned_data = pd.DataFrame(sql, columns =["patient_id","series_id", "patient_paths", "patient_segmentation"])
   cleaned_data["patient_paths"] = cleaned_data["patient_paths"].apply(string_to_list)
-  print(cleaned_data.head())
+  #print(cleaned_data.head())
 
   labelencoder = LabelEncoder()
+  num_classes = 6
 
   with mlflow.start_run() as run:
     run_id = run.info.run_id
     mlflow.tensorflow.autolog()
+    
+    with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_segmentations/X_y_segmentations_data.npy', 'rb') as f:
+       X = np.load(f, allow_pickle=True)
+       y = np.load(f, allow_pickle=True)
 
-    volume_of_imgs, volume_of_segs = generate_data_volumes(data=cleaned_data, idx=100)
+    class_weights = [0.17649986,  7.78453571, 41.53978194, 65.20657672, 96.75504125,  6.40743063]
 
-    encoded_masks, num_classes, weights = compute_class_weights_and_encode_masks(volume_of_segs)
-
-    volume_images_cleaned, volume_segs_cleaned = transpose_and_expand_data(volume_images=volume_of_imgs, volume_masks_encoded=encoded_masks)
-
-    X_train , X_test, y_train, y_test = train_test_split(volume_images_cleaned, volume_segs_cleaned, test_size = 0.10, random_state = 0)
+    X_train , X_test, y_train, y_test = train_test_split(X[:20], y[:20], test_size = 0.10, random_state = 0)
     train_masks_cat = to_categorical(y_train, num_classes=num_classes)
     y_train_cat = train_masks_cat.reshape((y_train.shape[0], y_train.shape[1], y_train.shape[2], num_classes))
     test_masks_cat = to_categorical(y_test, num_classes=num_classes)
@@ -160,9 +160,9 @@ if __name__	== "__main__":
     Unet = build_unet_model(input_shape)
     
 
-    Unet.compile(optimizer='adam', loss=weightedLoss(tf.keras.losses.categorical_crossentropy, weights), metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=num_classes)])
+    Unet.compile(optimizer='adam', loss=weightedLoss(tf.keras.losses.categorical_crossentropy, class_weights), metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=num_classes)])
     history = Unet.fit(X_train, y_train_cat, 
-                    batch_size = 32, 
+                    batch_size = 10, 
                     verbose=1, 
                     epochs=70, 
                     validation_data=(X_test, y_test_cat), 
