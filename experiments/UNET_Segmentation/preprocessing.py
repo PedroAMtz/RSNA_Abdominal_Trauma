@@ -7,6 +7,8 @@ import nibabel as nib
 from glob import glob
 from sklearn import preprocessing
 from sklearn.preprocessing import LabelEncoder
+from sklearn.utils import class_weight
+import sqlite3
 
 
 def window_converter(image, window_width=400, window_level=50):      
@@ -86,18 +88,64 @@ def generate_patient_processed_data(list_img_paths, list_seg_paths, target_size=
     normalized_siz_volume = normalize_volume(resized_images)
     volume_array = normalized_siz_volume
     volume_mask = create_3D_segmentations(list_seg_paths, target_size=target_size)
+
+    return volume_array, volume_mask
+
+def compute_class_weights_and_encode_masks(volume_segmentations):
+  labelencoder = LabelEncoder()  
+  n, h, w = volume_segmentations.shape
+  train_masks_reshaped = volume_segmentations.reshape(-1,1)
+  train_masks_reshaped_encoded = labelencoder.fit_transform(train_masks_reshaped.ravel())
+  train_masks_encoded_original_shape = train_masks_reshaped_encoded.reshape(n, h, w)
+  number_classes = len(np.unique(train_masks_reshaped_encoded))
+  class_weights = class_weight.compute_class_weight('balanced',
+                                                 classes = np.unique(train_masks_reshaped_encoded),
+                                                 y = train_masks_reshaped_encoded)
+
+  return train_masks_encoded_original_shape, number_classes, class_weights
+
+def transpose_and_expand_data(volume_images, volume_masks_encoded):
+  transposed_volume_dcm = np.transpose(volume_images, (2, 0, 1))
+  transpose_volume_nii = np.transpose(volume_masks_encoded, (2, 0, 1))
+
+  transposed_volume_dcm = np.expand_dims(transposed_volume_dcm, axis=3)
+  transpose_volume_nii = np.expand_dims(transpose_volume_nii, axis=3)
+
+  print(f"Final data shape: {transposed_volume_dcm.shape}, {transpose_volume_nii.shape}")
+
+  return transposed_volume_dcm, transpose_volume_nii
+
+def generate_data_volumes(data, idx):
+  volume_dcm = []
+  volume_nii = []
+
+  for i in range(idx):
+    volume_img, volume_seg = generate_patient_processed_data(data["patient_paths"][i], data["patient_segmentation"][i])
     
-    transposed_volume_dcm = np.transpose(volume_array, (2, 0, 1))
-    transpose_volume_nii = np.transpose(volume_mask, (2, 0, 1))
+    volume_dcm.append(volume_img)
+    volume_nii.append(volume_seg)
+  
+  volume_of_imgs = np.concatenate(volume_dcm, axis=2)
+  volume_of_segs = np.concatenate(volume_nii, axis=2)
+
+  return volume_of_imgs, volume_of_segs
+
+def string_to_list(string_repr):
+    return eval(string_repr)
+
+if __name__ == "__main__":
+
+    connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
+    sql = pd.read_sql_query("SELECT * FROM segmentations_data", connection)
+    cleaned_data = pd.DataFrame(sql, columns =["patient_id","series_id", "patient_paths", "patient_segmentation"])
+    cleaned_data["patient_paths"] = cleaned_data["patient_paths"].apply(string_to_list)
+
+    volume_of_imgs, volume_of_segs = generate_data_volumes(data=cleaned_data, idx=50)
+
+    encoded_masks, num_classes, weights = compute_class_weights_and_encode_masks(volume_of_segs)
+    print(weights)
+    volume_images_cleaned, volume_segs_cleaned = transpose_and_expand_data(volume_images=volume_of_imgs, volume_masks_encoded=encoded_masks)
     
-    labelencoder = LabelEncoder()
-
-    n, h, w = transpose_volume_nii.shape
-    train_masks_reshaped = transpose_volume_nii.reshape(-1,1)
-    train_masks_reshaped_encoded = labelencoder.fit_transform(train_masks_reshaped.ravel())
-    train_masks_encoded_original_shape = train_masks_reshaped_encoded.reshape(n, h, w)
-
-    transposed_volume_dcm = np.expand_dims(transposed_volume_dcm, axis=3)
-    transpose_volume_nii = np.expand_dims(train_masks_encoded_original_shape, axis=3)
-
-    return transposed_volume_dcm, transpose_volume_nii
+    with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_segmentations/X_y_segmentations_data.npy', 'wb') as f:
+        np.save(f, volume_images_cleaned)
+        np.save(f, volume_segs_cleaned)
