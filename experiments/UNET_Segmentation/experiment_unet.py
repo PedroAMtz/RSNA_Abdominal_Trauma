@@ -171,7 +171,7 @@ if __name__	== "__main__":
     
     Unet.save(f'Unet_{str(run_id)}.hdf5')
 
-    mlflow.log_artifact(training_plot(['loss', 'accuracy', 'mean_io_u'], history), artifact_path='figures')
+    #mlflow.log_artifact(training_plot(['loss', 'accuracy', 'mean_io_u'], history), artifact_path='figures')
     
     assert mlflow.active_run()
     assert mlflow.active_run().info.run_id == run.info.run_id
