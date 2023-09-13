@@ -80,13 +80,14 @@ def segmentation_visualization(volume: np.array, volume_seg, slice_dcm):
   plt.show()
     
 def training_plot(metrics, history):
-    f, ax = plt.subplots(1, len(metrics), figsize=(5*len(metrics), 4))
+    fig, ax = plt.subplots(1, len(metrics), figsize=(5*len(metrics), 4))
     for idx, metric in enumerate(metrics):
         ax[idx].plot(history.history[metric], ls='dashed')
         ax[idx].set_xlabel("Epochs")
         ax[idx].set_ylabel(metric)
         ax[idx].plot(history.history['val_' + metric]);
-        ax[idx].legend([metric, 'val_' + metric])
+        ax[idx].legend([metric, 'val_' + metric])  
+    return fig
 
 def string_to_list(string_repr):
     return eval(string_repr)
@@ -148,9 +149,13 @@ if __name__	== "__main__":
        X = np.load(f, allow_pickle=True)
        y = np.load(f, allow_pickle=True)
 
+    X_test = X[-100:]
+    y_test = y[-100:]
+
     class_weights = [0.17649986,  7.78453571, 41.53978194, 65.20657672, 96.75504125,  6.40743063]
 
-    data_generator = DataGenerator(X, y, 32)
+    data_generator = DataGenerator(X, y, num_classes, 32)
+    data_generator_test = DataGenerator(X_test, y_test, num_classes, 32)
     
 
     input_shape = (128, 128, 1)
@@ -158,12 +163,15 @@ if __name__	== "__main__":
     
 
     Unet.compile(optimizer='adam', loss=weightedLoss(tf.keras.losses.categorical_crossentropy, class_weights), metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=num_classes)])
-    history = Unet.fit(data_generator, 
+    history = Unet.fit(data_generator,
+                    validation_data=data_generator_test, 
                     verbose=1, 
-                    epochs=70, 
+                    epochs=100, 
                     shuffle=False)
     
     Unet.save(f'Unet_{str(run_id)}.hdf5')
+
+    mlflow.log_artifact(training_plot(['loss', 'accuracy', 'mean_io_u'], history), artifact_path='figures')
     
     assert mlflow.active_run()
     assert mlflow.active_run().info.run_id == run.info.run_id
