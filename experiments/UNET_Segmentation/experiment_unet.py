@@ -10,6 +10,7 @@ from keras import backend as K
 import re
 import os
 from glob import glob
+from data_gen import DataGenerator
 from unet import build_unet_model
 from sklearn.preprocessing import LabelEncoder
 from preprocessing import generate_patient_processed_data
@@ -63,20 +64,20 @@ def weightedLoss(originalLossFunc, weightsList):
 
 # ------------------------ Plotting utils -----------------------------------
 
-def segmentation_visualization(volume, volume_seg, slice_dcm):
+def segmentation_visualization(volume: np.array, volume_seg, slice_dcm):
     
-    fig = plt.figure(figsize=(14,14), constrained_layout=True)
+  fig = plt.figure(figsize=(14,14), constrained_layout=True)
 
-    ax1 = fig.add_subplot(131)
-    ax1.imshow(volume[slice_dcm,:,:], cmap = 'gray')
+  ax1 = fig.add_subplot(131)
+  ax1.imshow(volume[slice_dcm,:,:], cmap = 'gray')
 
-    ax2 = fig.add_subplot(132)
-    ax2.imshow(volume_seg[slice_dcm,:,:], cmap = 'gray')
+  ax2 = fig.add_subplot(132)
+  ax2.imshow(volume_seg[slice_dcm,:,:], cmap = 'gray')
 
-    ax3 = fig.add_subplot(133)
-    ax3.imshow(volume[slice_dcm,:,:]*np.where(volume_seg[slice_dcm,:,:]>0,1,0), cmap = 'gray')
-    ax3.set_title('Overlay of Original and Segmented', fontsize=14)
-    plt.show()
+  ax3 = fig.add_subplot(133)
+  ax3.imshow(volume[slice_dcm,:,:]*np.where(volume_seg[slice_dcm,:,:]>0,1,0), cmap = 'gray')
+  ax3.set_title('Overlay of Original and Segmented', fontsize=14)
+  plt.show()
     
 def training_plot(metrics, history):
     f, ax = plt.subplots(1, len(metrics), figsize=(5*len(metrics), 4))
@@ -149,11 +150,7 @@ if __name__	== "__main__":
 
     class_weights = [0.17649986,  7.78453571, 41.53978194, 65.20657672, 96.75504125,  6.40743063]
 
-    X_train , X_test, y_train, y_test = train_test_split(X[:20], y[:20], test_size = 0.10, random_state = 0)
-    train_masks_cat = to_categorical(y_train, num_classes=num_classes)
-    y_train_cat = train_masks_cat.reshape((y_train.shape[0], y_train.shape[1], y_train.shape[2], num_classes))
-    test_masks_cat = to_categorical(y_test, num_classes=num_classes)
-    y_test_cat = test_masks_cat.reshape((y_test.shape[0], y_test.shape[1], y_test.shape[2], num_classes))
+    data_generator = DataGenerator(X, y, 32)
     
 
     input_shape = (128, 128, 1)
@@ -161,11 +158,9 @@ if __name__	== "__main__":
     
 
     Unet.compile(optimizer='adam', loss=weightedLoss(tf.keras.losses.categorical_crossentropy, class_weights), metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=num_classes)])
-    history = Unet.fit(X_train, y_train_cat, 
-                    batch_size = 10, 
+    history = Unet.fit(data_generator, 
                     verbose=1, 
                     epochs=70, 
-                    validation_data=(X_test, y_test_cat), 
                     shuffle=False)
     
     Unet.save(f'Unet_{str(run_id)}.hdf5')
