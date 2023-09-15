@@ -11,7 +11,8 @@ from sklearn.utils import class_weight
 import sqlite3
 
 
-def window_converter(image, window_width=400, window_level=50):      
+def window_converter(image, window_width=400, window_level=50):
+
     img_min = window_level - window_width // 2
     img_max = window_level + window_width // 2
     window_image = image.copy()
