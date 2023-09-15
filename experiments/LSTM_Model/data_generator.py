@@ -7,18 +7,22 @@ import numpy as np
 
 
 class SuperDataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, x_set: list, y_set: list, batch_size: int, target_size: tuple) -> None:
+    def __init__(self, x_set: list, y_set: list, batch_size: int, target_size: tuple, window_width: int, window_level: int) -> None:
 
         """_Initialize the Data Generator_
+
+        Update -> Now the Window_Level & Window_Width must be passed for datagen initialization
         """
         self.x, self.y = x_set, y_set
         self.batch_size = batch_size
         self.target_size = target_size
+        self.window_width = window_width
+        self.window_level = window_level
     
     def __len__(self):
         return math.ceil(len(self.x) / self.batch_size)
     
-    def window_converter(self, image, window_width=400, window_level=50):
+    def window_converter(self, image):
 
         """_Uses the window values in order to create desired contrast to the image_
 
@@ -28,14 +32,25 @@ class SuperDataGenerator(tf.keras.utils.Sequence):
             _returns a numpy array with the desired window level applied_
         """
 
-        img_min = window_level - window_width // 2
-        img_max = window_level + window_width // 2
+        img_min = self.window_level - self.window_width // 2
+        img_max = self.window_level + self.window_width // 2
         window_image = image.copy()
         window_image[window_image < img_min] = img_min
         window_image[window_image > img_max] = img_max
         return window_image
 
     def transform_to_hu(self, medical_image, image):
+
+        """_Tranforms Hounsfield Units considering
+            an input image and image path for reading
+            metadata_
+
+        Returns
+        -------
+        _np.ndarray_
+            _Returns a numpy array_
+        """
+
         meta_image = pydicom.dcmread(medical_image)
         intercept = meta_image.RescaleIntercept
         slope = meta_image.RescaleSlope
@@ -76,6 +91,15 @@ class SuperDataGenerator(tf.keras.utils.Sequence):
         return final_image
     
     def normalize_image(self, image):
+
+        """_Normalizes a 2D input image_
+
+        Returns
+        -------
+        _np.ndarray_
+            _returns normalized image as numpy array_
+        """
+
         # Ensure the input image is 2D
         if len(image.shape) != 2:
             raise ValueError("Input must be a 2D image.")
@@ -90,6 +114,7 @@ class SuperDataGenerator(tf.keras.utils.Sequence):
         return normalized_image
     
     def __getitem__(self, index):
+
         batch_x = self.x[index * self.batch_size:(index + 1) * self.batch_size]
         batch_y = self.y[index * self.batch_size:(index + 1) * self.batch_size]
 
