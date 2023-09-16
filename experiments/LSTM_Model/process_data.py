@@ -93,3 +93,29 @@ def process_train_data(data: pd.DataFrame, train_data_cat: pd.DataFrame, path: s
         return data_new
     else:
         return final_data
+
+def process_balanced_data(data: pd.DataFrame)-> pd.DataFrame:
+    def update_labels_list(row):
+            """_Auxiliary function to create a list from value in category column
+                creates a list with lenght equals to the lenght ot the paths lists
+                from each patient_
+
+            Parameters
+            ----------
+            row : _pd.DataFrame_
+                _pass dataframe object_
+
+            Returns
+            -------
+            _list_
+                _returns a list with repeated values considering the label (0 or 1)_
+            """
+            return [row['Patient_category']] * len(row['Patient_paths'])
+        
+    data["Patient_category"] = data.apply(update_labels_list, axis=1)
+    concatenated_list_paths = [item for sublist in data['Patient_paths'] for item in sublist]
+    concatenated_list_label = [item for sublist in data['Patient_category'] for item in sublist]
+        
+    data = {"Paths":concatenated_list_paths, "Labels":concatenated_list_label}
+    data_new = pd.DataFrame(data)
+    return data_new
