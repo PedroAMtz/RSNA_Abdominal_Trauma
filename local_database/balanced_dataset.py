@@ -20,6 +20,6 @@ data_negative.drop_duplicates(subset=['Patient_id'], keep='first')
 data_negative = data_negative.sample(n=855)
 
 merged_data = pd.concat([data_positive, data_negative], ignore_index=True).sample(frac=1, random_state=42)
-merged_data.drop('Patient_paths', axis=1, inplace=True)
+#merged_data.drop('Patient_paths', axis=1, inplace=True)
 
-merged_data.to_sql(name="balanced_data", con=connection, if_exists="append", index=False)
+merged_data.to_sql(name="balanced_data", con=connection, if_exists="replace", index=False)
