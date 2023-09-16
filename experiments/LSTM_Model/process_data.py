@@ -119,3 +119,6 @@ def process_balanced_data(data: pd.DataFrame)-> pd.DataFrame:
     data = {"Paths":concatenated_list_paths, "Labels":concatenated_list_label}
     data_new = pd.DataFrame(data)
     return data_new
+
+def string_to_list(string_repr):
+    return eval(string_repr)
