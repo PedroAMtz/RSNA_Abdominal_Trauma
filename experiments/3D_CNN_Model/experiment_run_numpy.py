@@ -58,8 +58,8 @@ if __name__ == "__main__":
     connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
     # ATTENTION ABOUT THE TABLE FROM THE DB YOU CONNECT!!
     sql = pd.read_sql_query("SELECT * FROM balanced_data", connection)
-    data = pd.DataFrame(sql, columns =["Patient_id", "Series_id", "Patient_category"])
-    #data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
+    data = pd.DataFrame(sql, columns =["Patient_id", "Series_id", "Patient_paths", "Patient_category"])
+    data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
 
 
     np.random.seed(10)
