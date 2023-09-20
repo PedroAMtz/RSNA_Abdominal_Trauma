@@ -11,3 +11,7 @@
 ### Experiment Architecture
 ---
 !["Imagen de arquitectura de experimentos"](/Flujo_experimentos.png)
+
+### Window Data
+
+!["Imagen de ventanas"](/windows_hu.jpeg)
