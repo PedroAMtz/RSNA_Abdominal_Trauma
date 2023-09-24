@@ -1,5 +1,5 @@
-import pandas as pd 
 import numpy as np
+import pandas as pd 
 import os
 import cv2
 import pydicom
@@ -9,7 +9,6 @@ from sklearn import preprocessing
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import class_weight
 import sqlite3
-
 
 def window_converter(image, window_width=400, window_level=50):
 
@@ -134,8 +133,39 @@ def generate_data_volumes(data, idx):
 def string_to_list(string_repr):
     return eval(string_repr)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
+    # Commented process to split large dataset into smaller batches
+    """
+    with open(f'C:/Users/pedro/OneDrive/Escritorio/Proyecto_IA_SS\RSNA_Abdominal_Trauma/experiments/UNET_Segmentation/Validation_data/X_y_segmentations_data_1_part1.npy', 'rb') as f:
+        X = np.load(f, allow_pickle = True)
+        y = np.load(f, allow_pickle = True)
+
+    print(X.shape, y.shape)
+    data_shape = X.shape
+    num_batches = 3
+
+    # Calculate the number of samples in each batch
+    samples_per_batch = data_shape[0] // num_batches
+
+    # Split the array into batches
+    batches_imgs = np.array_split(X, num_batches, axis=0)
+    batches_segm = np.array_split(y, num_batches, axis=0)
+    #print(batches[0].shape, batches[1].shape, batches[2].shape)
+
+
+    with open(f'C:/Users/pedro/OneDrive/Escritorio/Proyecto_IA_SS\RSNA_Abdominal_Trauma/experiments/UNET_Segmentation/Validation_data/X_y_segmentations_data_1_part1.npy', 'wb') as f:
+        np.save(f, batches_imgs[0])
+        np.save(f, batches_segm[0])
+    
+    with open(f'C:/Users/pedro/OneDrive/Escritorio/Proyecto_IA_SS\RSNA_Abdominal_Trauma/experiments/UNET_Segmentation/Validation_data/X_y_segmentations_data_1_part2.npy', 'wb') as f:
+        np.save(f, batches_imgs[1])
+        np.save(f, batches_segm[1])
+    
+    with open(f'C:/Users/pedro/OneDrive/Escritorio/Proyecto_IA_SS\RSNA_Abdominal_Trauma/experiments/UNET_Segmentation/Validation_data/X_y_segmentations_data_1_part3.npy', 'wb') as f:
+        np.save(f, batches_imgs[2])
+        np.save(f, batches_segm[2])
+    """
     connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
     sql = pd.read_sql_query("SELECT * FROM segmentations_data", connection)
     cleaned_data = pd.DataFrame(sql, columns =["patient_id","series_id", "patient_paths", "patient_segmentation"])
