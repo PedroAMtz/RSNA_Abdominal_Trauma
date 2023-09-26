@@ -47,8 +47,13 @@ def process_training_data(data: pd.DataFrame, train_data_cat: pd.DataFrame,
     Returns
     -------
     _pd.DataFrame_
-        _Returns a pd.DataFrame, if LSTM_train equal True
-        it will return the DataFrame with paths and labels_
+        _Returns a pd.DataFrame, if extended_data equal True
+        it will return the DataFrame with paths and labels, different from
+        normal functionality that returns a list of paths per patient study,
+        if extract_paths equal True then the list of paths will have
+        a length of 64 random but ordered slices from the study,
+        if both parameters are True then it will return the pd.DataFrame
+        with paths and labels but paths are reduced by extract_paths condition_
     """
     # Cut columns from dataframe that are redundant or not useful
     data_to_merge = data[["patient_id", "series_id"]]
