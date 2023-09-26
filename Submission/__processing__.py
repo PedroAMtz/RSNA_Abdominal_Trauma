@@ -1,10 +1,117 @@
 
 from scipy.ndimage import zoom
 import numpy as np
+import cv2
 import pandas as pd
 from glob import glob
+import pydicom
+from sklearn import preprocessing
 import random
 import re
+
+def window_converter(image, window_width: int=400, window_level: int=50) -> np.ndarray:
+
+    """_Uses the window values in order to create desired contrast to the image_
+
+        Returns
+        -------
+        _np.ndarray_
+            _returns a numpy array with the desired window level applied_
+    """
+    img_min = window_level - window_width // 2
+    img_max = window_level + window_width // 2
+    window_image = image.copy()
+    window_image[window_image < img_min] = img_min
+    window_image[window_image > img_max] = img_max
+    return window_image
+
+def transform_to_hu(medical_image: str, image: np.ndarray) -> np.ndarray:
+
+    """_Tranforms Hounsfield Units considering
+            an input image and image path for reading
+            metadata_
+
+        Returns
+        -------
+        _np.ndarray_
+            _Returns a numpy array_
+    """
+    meta_image = pydicom.dcmread(medical_image)
+    intercept = meta_image.RescaleIntercept
+    slope = meta_image.RescaleSlope
+    hu_image = image * slope + intercept
+    return hu_image
+
+def standardize_pixel_array(dcm: pydicom.dataset.FileDataset) -> np.ndarray:
+    """_Correct DICOM pixel_array if PixelRepresentation == 1._
+
+        Returns
+        -------
+        _np.ndarray_
+            _returns the pixel array from the dicom file with the
+            fixed pixel representation value_
+    """
+    # Correct DICOM pixel_array if PixelRepresentation == 1.
+    pixel_array = dcm.pixel_array
+    if dcm.PixelRepresentation == 1:
+        bit_shift = dcm.BitsAllocated - dcm.BitsStored
+        dtype = pixel_array.dtype 
+        pixel_array = (pixel_array << bit_shift).astype(dtype) >> bit_shift
+    return pixel_array
+
+def resize_img(img_paths: list, target_size: tuple=(128, 128)) -> np.ndarray:
+    
+    """_Resize and fix pixel array_
+
+        Returns
+        -------
+        _np.ndarray_
+            _Returns fixed and normalized image_
+    """
+    volume_shape = (target_size[0], target_size[1], len(img_paths)) 
+    volume = np.zeros(volume_shape, dtype=np.float64)
+    for i, image_path in enumerate(img_paths):
+        image = pydicom.read_file(image_path)
+        image = standardize_pixel_array(image)
+        hu_image = transform_to_hu(image_path, image)
+        window_image = window_converter(hu_image)
+        image = cv2.resize(window_image, target_size)
+        volume[:,:,i] = image
+    return volume
+    
+def normalize_volume(resized_volume: np.ndarray) -> np.ndarray:
+
+    """_Normalizes a 2D input image_
+
+        Returns
+        -------
+        _np.ndarray_
+            _returns normalized image as numpy array_
+    """
+    original_shape = resized_volume.shape
+    flattened_image = resized_volume.reshape((-1,))
+    scaler = preprocessing.MinMaxScaler()
+    normalized_flattened_image = scaler.fit_transform(flattened_image.reshape((-1, 1)))
+    normalized_volume_image = normalized_flattened_image.reshape(original_shape)
+    return normalized_volume_image
+
+def transpose_and_expand_data(volume_images: np.ndarray) -> np.ndarray:
+  
+    """_Transpose and expand volume data into a shape following
+        (# of images, width, length, channels)_
+
+    Returns
+    -------
+    _np.ndarray_
+        _returns a numpy array transposed and with expanded dimensions_
+    """
+
+    transposed_volume_dcm = np.transpose(volume_images, (2, 0, 1))
+    transposed_volume_dcm = np.expand_dims(transposed_volume_dcm, axis=3)
+
+    print(f"Final data shape: {transposed_volume_dcm.shape}")
+
+    return transposed_volume_dcm
 
 def change_depth_siz(patient_volume: np.ndarray, target_depth: int=64) -> np.ndarray:
 
