@@ -137,13 +137,15 @@ def process_training_data(data: pd.DataFrame, train_data_cat: pd.DataFrame,
 
 if __name__ == "__main__":
         
-    conn = sqlite3.connect("training_data.db")
-    print("Cnnection with db succesfull...")
+    #conn = sqlite3.connect("training_data.db")
+    #print("Cnnection with db succesfull...")
 
     train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
     cat_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
     path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/"
     cleaned_df = process_training_data(train_data, cat_data, path=path, number_idx=len(train_data))
+    cleaned_df.to_csv("train_data_lstm.csv", index=False)
+    """
     print("Data extraction terminated...")
 
 	# some colum of the database storing lists, must change objecto type in order to store in db
@@ -151,4 +153,5 @@ if __name__ == "__main__":
     cleaned_df["Patient_paths"] = cleaned_df["Patient_paths"].astype(str)
     cleaned_df.to_sql(name="submission_data", con=conn, if_exists="replace", index=False)
     print("DB table update finished...")
+    """
 
