@@ -12,7 +12,6 @@ import re
 import cv2
 from scipy.ndimage import zoom
 from tensorflow.keras.models import load_model
-tf.config.run_functions_eagerly(True)
 
 """ 
 Script for generating dataset considering the predictions made by 
@@ -124,7 +123,6 @@ def change_depth_siz(patient_volume: np.ndarray, target_depth: int=64) -> np.nda
 
 def generate_patient_processed_data(list_img_paths: list, target_size: tuple=(128,128)):
 
-    num_patients = len(list_img_paths)
     height = target_size[0]
     width = target_size[1]
     depth = len(list_img_paths)
@@ -140,7 +138,7 @@ def generate_patient_processed_data(list_img_paths: list, target_size: tuple=(12
     volume_array = volume_array.transpose(2, 0, 1)
     return np.expand_dims(volume_array, axis=-1)
 
-def __reduce_data_with_prediction__(model_path: str, x_data: np.ndarray) -> np.ndarray:
+def __reduce_data_with_prediction__(model, x_data: np.ndarray) -> np.ndarray:
 
     """_This function takes the model to use for prediction
         and a set of data from which to predict the segmentation
@@ -157,7 +155,7 @@ def __reduce_data_with_prediction__(model_path: str, x_data: np.ndarray) -> np.n
          but reduced considering the upper and lower limit_
     """
 
-    model = load_model(model_path, compile=False)
+    #model = load_model(model_path, compile=False)
     
     y_pred = model.predict(x_data)
     y_pred_argmax=np.argmax(y_pred, axis=3)
@@ -199,12 +197,12 @@ def string_to_list(string_repr):
 if __name__ == "__main__":
     data = pd.read_csv("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/train_data_lstm.csv")
     data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
-
-    for i in range(2):
+    model = load_model("Unet_Fine_Tune_128_plus_CKP.h5", compile=False)
+    for i in range(4):
          print(f'Generating data for patient -> {str(data["Patient_id"][i])} \n')
          patient_data_volumes = generate_patient_processed_data(data["Patient_paths"][i], target_size=(128,128))
          print("Initializing prediction and data reduction \n")
-         patient_data_volumes_reduced = __reduce_data_with_prediction__("Unet_Fine_Tune_128_plus_CKP.h5", patient_data_volumes)
+         patient_data_volumes_reduced = __reduce_data_with_prediction__(model, patient_data_volumes)
          print("Changing volume depth with zoom... \n")
          patient_data_volumes_zoom = change_depth_siz(patient_data_volumes_reduced, target_depth=64)
          
