@@ -168,22 +168,20 @@ def __reduce_data_with_prediction__(model_path: str, x_data: np.ndarray) -> np.n
     start_idx = None
     end_idx = None
 
-    for i in range(y_pred_argmax.shape[0]):
-
-        slice_i = y_pred_argmax[i, :, :]
-
-        class_mask = y_pred_argmax[i, :, :] == upper_limit_class
-        class_area = np.sum(class_mask)
-
-        class_mask_2 = y_pred_argmax[i, :, :] == lower_limit_class
-        class_area_2 = np.sum(class_mask_2)
+    for i, _slice in enumerate(y_pred_argmax):
+        class_mask = _slice == upper_limit_class
+        masked_trues = class_mask * _slice
+        summed_pixels = np.sum(masked_trues)
+        class_mask_ = _slice == lower_limit_class
+        masked_trues_ = class_mask_ * _slice
+        summed_pixels_ = np.sum(masked_trues_)
 
     
-        if np.any(slice_i == 1) & (class_area > 4.799599756684273):
+        if summed_pixels > 100:
             if start_idx is None:
                 start_idx = i
 
-        if (class_area_2 > 168.40557939914163):
+        if summed_pixels_ > 100:
             end_idx = i
 
     if (start_idx != None) & (end_idx != None):
