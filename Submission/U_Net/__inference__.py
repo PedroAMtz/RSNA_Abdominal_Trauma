@@ -12,6 +12,7 @@ import re
 import cv2
 from scipy.ndimage import zoom
 from tensorflow.keras.models import load_model
+tf.config.run_functions_eagerly(True)
 
 """ 
 Script for generating dataset considering the predictions made by 
@@ -139,7 +140,7 @@ def generate_patient_processed_data(list_img_paths: list, target_size: tuple=(12
     volume_array = volume_array.transpose(2, 0, 1)
     return np.expand_dims(volume_array, axis=-1)
 
-def __reduce_data_with_prediction__(model: str, x_data: np.ndarray) -> np.ndarray:
+def __reduce_data_with_prediction__(model_path: str, x_data: np.ndarray) -> np.ndarray:
 
     """_This function takes the model to use for prediction
         and a set of data from which to predict the segmentation
@@ -156,11 +157,7 @@ def __reduce_data_with_prediction__(model: str, x_data: np.ndarray) -> np.ndarra
          but reduced considering the upper and lower limit_
     """
 
-    model = load_model(model)
-
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.000001),
-              loss=tf.keras.losses.categorical_crossentropy,
-              metrics=tf.keras.metrics.MeanIoU(num_classes=6))
+    model = load_model(model_path, compile=False)
     
     y_pred = model.predict(x_data)
     y_pred_argmax=np.argmax(y_pred, axis=3)
@@ -202,13 +199,10 @@ def string_to_list(string_repr):
     return eval(string_repr)
 
 if __name__ == "__main__":
-    connection = sqlite3.connect("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/training_data.db")
-    # ATTENTION ABOUT THE TABLE FROM THE DB YOU CONNECT!!
-    sql = pd.read_sql_query("SELECT * FROM base_data", connection)
-    data = pd.DataFrame(sql, columns =["Patient_id", "Series_id", "Patient_paths", "Patient_category"])
+    data = pd.read_csv("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/train_data_lstm.csv")
     data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
 
-    for i in range(len(data)):
+    for i in range(2):
          print(f'Generating data for patient -> {str(data["Patient_id"][i])} \n')
          patient_data_volumes = generate_patient_processed_data(data["Patient_paths"][i], target_size=(128,128))
          print("Initializing prediction and data reduction \n")
