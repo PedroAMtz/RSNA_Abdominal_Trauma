@@ -30,15 +30,10 @@ class DataGenerator(tf.keras.utils.Sequence):
                 
         return np.array(batch_of_volumes, dtype=np.float64), np.array(batch_of_labels, dtype=np.float64)
 
-def string_to_list(string_repr):
-    return eval(string_repr)
 
 if __name__ == "__main__":
     data = pd.read_csv("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/train_data_lstm.csv")
-
-    data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
-    data['Patient_category'] = data['Patient_category'].apply(string_to_list)
-    datagen = DataGenerator(data['Patient_paths'], data['Patient_series'], 32)
+    datagen = DataGenerator(data['Patient_id'], data['Series_id'], 32)
 
     x, y = datagen[0]
     print(x.shape, y.shape)
