@@ -121,7 +121,7 @@ def change_depth_siz(patient_volume: np.ndarray, target_depth: int=64) -> np.nda
     img_new = zoom(patient_volume, (depth_factor, 1, 1, 1), mode='nearest')
     return img_new
 
-def generate_patient_processed_data(list_img_paths: list, target_size: tuple=(128,128)):
+def generate_patient_processed_data(list_img_paths: list, list_labels: list, target_size: tuple=(128,128)):
 
     height = target_size[0]
     width = target_size[1]
@@ -136,7 +136,7 @@ def generate_patient_processed_data(list_img_paths: list, target_size: tuple=(12
 
     volume_array = normalized_siz_volume
     volume_array = volume_array.transpose(2, 0, 1)
-    return np.expand_dims(volume_array, axis=-1)
+    return np.expand_dims(volume_array, axis=-1), np.array(list_labels, dtype=np.float64)
 
 def __reduce_data_with_prediction__(model, x_data: np.ndarray) -> np.ndarray:
 
@@ -196,16 +196,24 @@ def string_to_list(string_repr):
 
 if __name__ == "__main__":
     data = pd.read_csv("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/train_data_lstm.csv")
+
     data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
+    data['Patient_category'] = data['Patient_category'].apply(string_to_list)
+    print(type(data['Patient_category'][0]))
     model = load_model("Unet_Fine_Tune_128_plus_CKP.h5", compile=False)
-    for i in range(4):
-         print(f'Generating data for patient -> {str(data["Patient_id"][i])} \n')
-         patient_data_volumes = generate_patient_processed_data(data["Patient_paths"][i], target_size=(128,128))
-         print("Initializing prediction and data reduction \n")
-         patient_data_volumes_reduced = __reduce_data_with_prediction__(model, patient_data_volumes)
-         print("Changing volume depth with zoom... \n")
-         patient_data_volumes_zoom = change_depth_siz(patient_data_volumes_reduced, target_depth=64)
-         
-         with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/volume_data_for_LSTM/{str(data["Patient_id"][i])}_{str(data["Series_id"][i])}.npy', 'wb') as f:
-             np.save(f, patient_data_volumes_zoom)
-             print(f'Process finished for patient -> {str(data["Patient_id"][i])}', f"Final shape saved: {patient_data_volumes_zoom.shape}")
+    for i in range(len(data)):
+        print(f'Generating data for patient -> {str(data["Patient_id"][i])} \n')
+        patient_data_volumes, labels = generate_patient_processed_data(data["Patient_paths"][i], data["Patient_category"][i], target_size=(128,128))
+        print("Initializing prediction and data reduction \n")
+        patient_data_volumes_reduced = __reduce_data_with_prediction__(model, patient_data_volumes)
+        print("Changing volume depth with zoom... \n")
+        try:
+            patient_data_volumes_zoom = change_depth_siz(patient_data_volumes_reduced, target_depth=64)
+            print("Reduced volume")
+        except:
+            patient_data_volumes_zoom = change_depth_siz(patient_data_volumes, target_depth=64)
+            print("Original volume")
+        with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/volume_data_for_LSTM/{str(data["Patient_id"][i])}_{str(data["Series_id"][i])}.npy', 'wb') as f:
+            np.save(f, patient_data_volumes_zoom)
+            np.save(f, labels)
+            print(f'Process finished for patient -> {str(data["Patient_id"][i])}', f"Final shape saved: {patient_data_volumes_zoom.shape} and labels {labels.shape}")
