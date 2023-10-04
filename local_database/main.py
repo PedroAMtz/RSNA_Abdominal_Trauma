@@ -144,6 +144,7 @@ if __name__ == "__main__":
     cat_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
     path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/"
     cleaned_df = process_training_data(train_data, cat_data, path=path, number_idx=len(train_data))
+    print(cleaned_df.head(10))
     cleaned_df.to_csv("train_data_lstm.csv", index=False)
     """
     print("Data extraction terminated...")
