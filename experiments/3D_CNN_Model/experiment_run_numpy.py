@@ -92,13 +92,15 @@ if __name__ == "__main__":
 
         checkpoint_filepath = 'D:/Downloads/rsna-2023-abdominal-trauma-detection/Experiments_ckpt/experiment_{}_checkpoint.ckpt'.format(str(run_id))
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
-                                                                    save_weights_only=True)
+                                                              monitor="val_loss",
+                                                              save_best_only=True,
+                                                              save_weights_only=False,
+                                                              mode="max",
+                                                              verbose=1)
         
         early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor='acc', patience=20)
 
-        callbacks = [model_checkpoint_callback,
-                     tf.keras.callbacks.LearningRateScheduler(scheduler),
-                     PrintLR()]
+        callbacks = [model_checkpoint_callback]
 
         data_gen = NumpyImage3DGenerator(train["Patient_id"], train["Series_id"], train["Patient_category"], batch_size=4)
         data_gen_test = NumpyImage3DGenerator(test["Patient_id"], test["Series_id"],test["Patient_category"], batch_size=4)
