@@ -78,13 +78,19 @@ class NumpyImage3DGenerator(tf.keras.utils.Sequence):
     
     def __getitem__(self, idx):
         batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_series = self.series[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_of_volumes = []
-        for patient in range(len(batch_x)):
+        batch_of_labels = []
+        for patient, series in zip(batch_x, batch_series):
             try:
-                with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{self.x[patient]}_{self.series[patient]}.npy', 'rb') as f:
+                with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/volumes_for_LSTM/{self.x[patient]}_{self.series[series]}.npy', 'rb') as f:
                     X = np.load(f, allow_pickle=True)
-                batch_of_volumes.append(X)
+                    y = np.load(f, allow_pickle=True)
+                
+                reshaped_volume = np.transpose(X, (1, 2, 0, 3))
+                batch_of_volumes.append(reshaped_volume)
+                batch_of_labels.append(y)
             except:
                 continue
                 
