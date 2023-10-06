@@ -83,7 +83,7 @@ class NumpyImage3DGenerator(tf.keras.utils.Sequence):
         batch_of_labels = []
         for patient, series in zip(batch_x, batch_series):
             try:
-                with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/volumes_for_LSTM/{str(patient)}_{str(series)}.npy', 'rb') as f:
+                with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/volume_data_for_LSTM/{str(patient)}_{str(series)}.npy', 'rb') as f:
                     X = np.load(f, allow_pickle=True)
                     y = np.load(f, allow_pickle=True)
                 
