@@ -27,12 +27,12 @@ class ThreeDCNN:
         dense_layer_1 = Dropout(0.4)(dense_layer_1)
         dense_layer_2 = Dense(units=256, activation='relu')(dense_layer_1)
         dense_layer_2 = Dropout(0.4)(dense_layer_2)
-        output_layer = Dense(units=1, activation='sigmoid')(dense_layer_2)
+        output_layer = Dense(units=13, activation='softmax')(dense_layer_2)
         return output_layer
     
     def compile_model(self, model):
         #optimizer = SGD(learning_rate=1e-06, momentum=0.99, decay=0.0, nesterov=False)
-        model.compile(loss="mae", optimizer=tf.keras.optimizers.Adam(), metrics=['acc'])
+        model.compile(loss="categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(), metrics=['acc', tf.keras.metrics.AUC()])
     
     def summary(self):
         self.model.summary()
@@ -48,3 +48,8 @@ class ThreeDCNN:
         model = Model(inputs=input_layer, outputs=output)
         self.compile_model(model)
         return model
+
+if __name__ == "__main__":
+    input_shape = (128, 128, 64, 1)
+    model = ThreeDCNN(input_shape).model
+    model.summary()
