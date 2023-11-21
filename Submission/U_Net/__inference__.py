@@ -135,7 +135,7 @@ def generate_patient_processed_data(list_img_paths: list, list_labels: list, tar
     normalized_siz_volume = normalize_volume(resized_images)
 
     volume_array = normalized_siz_volume
-    volume_array = volume_array.transpose(2, 0, 1)
+    volume_array = volume_array.transpose(2, 1, 0)
     return np.expand_dims(volume_array, axis=-1), np.array(list_labels, dtype=np.float64)
 
 def __reduce_data_with_prediction__(model, x_data: np.ndarray) -> np.ndarray:
