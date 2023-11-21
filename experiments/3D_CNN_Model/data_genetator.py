@@ -1,12 +1,14 @@
 import tensorflow as tf 
-import pydicom
-import cv2
-from scipy.ndimage import zoom
-from sklearn import preprocessing
+#import pandas as pd
+#import pydicom
+#import cv2
+#from scipy.ndimage import zoom
+#from sklearn import preprocessing
 import math
+import os
 import numpy as np
 
-
+"""
 class RawImage3DGenerator(tf.keras.utils.Sequence):
     def __init__(self, x_set, y_set, batch_size, target_depth=64, target_size=(128,128)):
         self.x, self.y = x_set, y_set
@@ -64,12 +66,12 @@ class RawImage3DGenerator(tf.keras.utils.Sequence):
             normalized_volume = self.normalize_volume(resized_images_siz)
             resized_images[i,:,:,:] = normalized_volume
         return resized_images, np.array(batch_y)
-
+"""
 
 class NumpyImage3DGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, patient_set, series_set, category_set, batch_size):
-        self.x, self.y = patient_set, category_set
+    def __init__(self, patient_set, series_set, batch_size):
+        self.x = patient_set
         self.series = series_set
         self.batch_size = batch_size
     
@@ -86,31 +88,45 @@ class NumpyImage3DGenerator(tf.keras.utils.Sequence):
                 with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/volume_data_for_LSTM/{str(patient)}_{str(series)}.npy', 'rb') as f:
                     X = np.load(f, allow_pickle=True)
                     y = np.load(f, allow_pickle=True)
-                
                 reshaped_volume = np.transpose(X, (1, 2, 0, 3))
                 batch_of_volumes.append(reshaped_volume)
-                batch_of_labels.append(y)
+                batch_of_labels.append(y[0])
             except:
                 continue
                 
         return np.array(batch_of_volumes, dtype=np.float64), np.array(batch_of_labels, dtype=np.float64)
-    
-class NumpyImage3DGeneratorVal():
 
-    def __init__(self, patient_set, series_set, batch_size):
-        self.x_v = patient_set
-        self.series_v  = series_set
-        self.batch_size_v = batch_size
+
+class NumpyDataGenerator(tf.keras.utils.Sequence):
+
+    def __init__(self, multichannel_data: list, batch_size: int):
+        self.x = multichannel_data
+        self.batch_size = batch_size
     
     def __len__(self):
-        return math.ceil(len(self.x_v) / self.batch_size_v)
+        return math.ceil(len(self.x) / self.batch_size)
     
     def __getitem__(self, idx):
-        batch_x_v = self.x_v[idx * self.batch_size_v:(idx + 1) * self.batch_size_v]
-        batch_of_volumes_v = []
-        for x in range(len(batch_x_v)):
-            with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/train_data_128/{self.x_v[x]}_{self.series_v[x]}.npy', 'rb') as f:
-                X = np.load(f, allow_pickle=True)
-            batch_of_volumes_v.append(X)
+        batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_of_images = []
+        batch_of_labels = []
+        for numpy_file in batch_x:
+            try:
+                with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/multichannel_data/{numpy_file}', 'rb') as f:
+                    X = np.load(f, allow_pickle=True)
+                    y = np.load(f, allow_pickle=True)
+                batch_of_images.append(X)
+                batch_of_labels.append(y)
+            except:
+                continue
                 
-        return np.array(batch_of_volumes_v, dtype=np.float64)
+        return np.array(batch_of_images, dtype=np.float64), np.array(batch_of_labels, dtype=np.float64)
+
+if __name__ == "__main__":
+
+    data = os.listdir('D:/Downloads/rsna-2023-abdominal-trauma-detection/multichannel_data/')
+    datagen = NumpyDataGenerator(data, 32)
+    x, y = datagen[1]
+    print(x.shape, y.shape)
+
+    
