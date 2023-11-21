@@ -42,14 +42,12 @@ def image_window_converter(image):
     for i, window in enumerate (windows):
         window_width = window["window_width"]
         window_level = window["window_level"]
-        
         imagen_procesada = window_converter(image, window_width, window_level)
-        img_norm= normalize_image(imagen_procesada)
+        img_norm = normalize_image(imagen_procesada)
         imagenes_procesadas.append(img_norm)
         
-        window_image = np.stack(imagenes_procesadas, axis=-1)
-        
-        return window_image
+    window_image = np.stack(imagenes_procesadas, axis=-1)
+    return window_image
 
 def resize_img(image_path: str, target_size=(128, 128)) -> np.ndarray:
     image = pydicom.read_file(image_path)
@@ -193,17 +191,21 @@ def string_to_list(string_repr):
     return eval(string_repr)
 
 if __name__ == "__main__":
-    data = pd.read_csv("C:/Users/Daniel/Desktop/RSNA_Abdominal_Trauma/local_database/train_data_lstm.csv")
+    #train_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train_series_meta.csv")
+    #cat_data = pd.read_csv(f"D:/Downloads/rsna-2023-abdominal-trauma-detection/train.csv")
+    #path = "D:/Downloads/rsna-2023-abdominal-trauma-detection/train_images/"
+    #cleaned_df = process_training_data(train_data, cat_data, path=path, number_idx=len(train_data), extended_data=True)
+    #cleaned_df.to_csv("D:/Downloads/rsna-2023-abdominal-trauma-detection/multichannel_data.csv", index=False)
 
-    data['Patient_paths'] = data['Patient_paths'].apply(string_to_list)
-    data['Patient_category'] = data['Patient_category'].apply(string_to_list)
+    cleaned_df = pd.read_csv("D:/Downloads/rsna-2023-abdominal-trauma-detection/multichannel_data.csv")
+    cleaned_df["Labels"] = cleaned_df["Labels"].apply(string_to_list)
 
-    for i in range(len(data)):
+    for i in range(len(cleaned_df)):
 
-        patient_data = resize_img(data["Patient_paths"][i])
-        labels = np.array(data["Patient_category"][i], dtype=np.float32)
-
-        with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/multichannel_data/{str(data["Patient_id"][i])}_{str(data["Series_id"][i])}.npy', 'wb') as f:
+        patient_data = resize_img(cleaned_df["Paths"][i])
+        labels = np.array(cleaned_df["Labels"][i], dtype=np.float32)
+        
+        with open(f'D:/Downloads/rsna-2023-abdominal-trauma-detection/multichannel_data/multichannel_data_{str(i)}.npy', 'wb') as f:
             np.save(f, patient_data)
             np.save(f, labels)
-            print(f'Process finished for patient -> {str(data["Patient_id"][i])}', f"Final shape saved: {patient_data.shape} and labels {labels.shape}")
+            print(f'Process finished ffinal shape saved -> {patient_data.shape}, {labels.shape}')
